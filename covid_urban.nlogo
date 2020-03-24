@@ -61,6 +61,7 @@ people-own[
   repatriated ;; 0/1
   my-hospital
   in-icu?
+  infection-rate
 ]
 
 to setup
@@ -199,7 +200,7 @@ to setup-people
       set residence-city idc
       set in-icu? 0
       set use-protection "no"
-
+      set infection-rate 0
 
       set recovery-time random-normal average-recovery-time sd-recovery-time
 
@@ -332,7 +333,7 @@ to go
   go-to-work
   go-shopping
   help-and-care
-  go-to-hospital
+  ;go-to-hospital
   infect-people
   update-behaviour
   ]
@@ -381,9 +382,8 @@ to update-infection-status
       let serious random 100
 
  if viral-charge = "low"[
-   ifelse time-since-infection = recovery-time [
-      set infected? 0
-      set immune? 1
+   ifelse time-since-infection > recovery-time [
+      get-cured
     ][
        if serious < proba-complications [
       set serious-symptoms? 1
@@ -402,17 +402,26 @@ end
 
 
 to go-to-hospital
-  create-links-to hospitals
+  create-links-with hospitals
   let my-sorted-links sort-on [link-length] my-links
   let my-first-link item 0 my-sorted-links
   let nearest-hospital [other-end] of my-first-link
   set my-hospital nearest-hospital
-  move-to my-hospital
+  move-to [patch-here] of my-hospital
+  ask my-links [die]
   set mobile? 0
 end
 
 to transfer-to-icu
-  set in-icu? 1
+  if is-turtle? my-hospital [
+    ask my-hospital [
+         if available-icu-beds > 0 [
+    set available-beds available-beds + 1
+    set available-icu-beds available-icu-beds - 1
+    ]
+      ask myself [set in-icu? 1]
+  ]
+  ]
 end
 
 to deliver-50-protection
@@ -430,14 +439,17 @@ end
 
 to infect-people
   if infected? = 1 [
-    if viral-charge = "low" [let infection-rate infection-proba-without-symptoms]
-    if viral-charge = "high" [ let infection-rate infection-proba-with-symptoms]
+    if viral-charge = "low" [set infection-rate infection-proba-without-symptoms]
+    if viral-charge = "high" [ set infection-rate infection-proba-with-symptoms]
 
-  create-links-with people with [mobile? = 1] in-radius radius-infection
+  create-links-with other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection
   ask link-neighbors [
   let rdn random 100
-;  if rdn <
+      if rdn < [infection-rate] of myself[
+   start-infection
+      ]
   ]
+    ask my-links [die]
   ]
 end
 
@@ -460,7 +472,7 @@ end
 
 to treat-sick-people
 
-  ask people [get-cured]
+ ; ask people  [get-cured]
 end
 
 to get-cured
@@ -469,17 +481,20 @@ to get-cured
   set color blue
   set size 1
   set viral-charge "null"
+   if is-turtle? my-hospital [
   ifelse in-icu? = 1[
+
     ask my-hospital
   [
-    set available-beds available-beds + 1
+    set available-icu-beds available-icu-beds + 1
   ]
   ][
       ask my-hospital
   [
-    set available-icu-beds available-icu-beds + 1
+    set available-beds available-beds + 1
   ]
     ]
+  ]
   set serious-symptoms? 0
   set time-since-infection 0
   setxy item 0 residence-xy item 1 residence-xy
@@ -555,7 +570,7 @@ n-cities
 n-cities
 0
 10
-5.0
+6.0
 1
 1
 NIL
@@ -1150,7 +1165,7 @@ radius-infection
 radius-infection
 0
 10
-0.2
+1.2
 0.1
 1
 NIL
