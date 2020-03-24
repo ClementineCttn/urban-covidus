@@ -52,12 +52,15 @@ people-own[
   household-status ;; alone / couple / with-children
   caring-away-status ;; care / no-care
   residence-city ;;
+  residence-xy
   home-type ;; collective/individual
 ;;  access-to-light ;; single-window / multiple-windows / balcony / garden
 ;;  tenure-type ;; owned / rented / socially-rented / none
   secondary-home ;; 0/1
   comorbidity ;; 0/1
   repatriated ;; 0/1
+  my-hospital
+  in-icu?
 ]
 
 to setup
@@ -73,17 +76,17 @@ end
 to setup-city-links
    ask cities [
     create-links-with other cities in-radius link-radius
-    create-link-with one-of other cities with [id < n-cities / 2]
+    create-link-with one-of other cities with [hospital? = 1]
   ]
 end
 
 to setup-cities
-  ask patches [set pcolor white]
+  ask patches [set pcolor 9]
    let i 1
   create-cities n-cities [
     setxy random-xcor random-ycor
     while [
-      [pcolor] of patch-here != white
+      [pcolor] of patch-here != 9
     ] [ setxy random-xcor random-ycor ]
     set id i
     set population max-pop-city / i
@@ -91,6 +94,7 @@ to setup-cities
     set color pink
     set size population / 100
     let p population / 100
+     set hospital? 0
     ask patch-here [
       set pcolor 120 + i
       set city-id i
@@ -141,7 +145,7 @@ to setup-hospitals
 
 
   ask cities with [population > max-pop-city / 3][
-    set hospital?
+    set hospital? 1
 
     let share-population population / sum [population] of cities with [population > max-pop-city / 3]
 
@@ -180,6 +184,7 @@ to setup-people
     sprout-people dens [
       set xcor xcor - 0.5 + random-float 1
       set ycor ycor - 0.5 + random-float 1
+      set residence-xy list xcor ycor
       set shape "person"
       set color black
       set size 0.5
@@ -190,13 +195,13 @@ to setup-people
       set serious-symptoms? 0
       set immune? 0
       set time-since-infection 0
-      set recovery-time 0
-      set viral-charge 0
+      set viral-charge "null"
       set residence-city idc
+      set in-icu? 0
+      set use-protection "no"
 
-      set use-protection 0
 
-
+      set recovery-time random-normal average-recovery-time sd-recovery-time
 
       ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
       let a random-float 100
@@ -299,7 +304,7 @@ to setup-people
 
     ]
   ]
-  ask one-of people [set infected? 1]
+ infect-one-person
 
    assign-color
 end
@@ -310,20 +315,33 @@ to assign-color
   ask people with [immune? = 1][ set color blue ]
   ask people with [alive? = 0][ set color black set size 1 set shape "x"]
   ask people with [health-worker? = 1][set size 1.5 set shape "health-worker"]
+  ask hospitals with [available-beds  = 0] [ set color red ]
+  ask hospitals with [available-beds > 0] [ set color blue ]
 end
 
 
 to go
 
-  if all? turtles [infected? = 0]
+  if all? people [infected? = 0]
     [ stop ]
-  if all? turtles [alive? = 0]
+  if all? people [alive? = 0]
     [ stop ]
 
-  ask turtles
-    [ assign-color
-      update-globals ]
+  ask people [
+  update-infection-status
+  go-to-work
+  go-shopping
+  help-and-care
+  go-to-hospital
+  infect-people
+  update-behaviour
+  ]
 
+  ask hospitals [
+   treat-sick-people
+  ]
+   update-globals
+   assign-color
   tick
 
 end
@@ -336,11 +354,143 @@ to update-globals
  set n-available-icu-beds sum [available-icu-beds] of hospitals
 end
 
+to infect-one-person
+  ask one-of people with [infected? = 0 and alive? = 1 and immune? = 0][
+    start-infection
+  ]
+end
+
+to start-infection
+  set infected? 1
+  set color yellow
+  set size 1.5
+  set viral-charge "low"
+end
+
+to update-infection-status
+  if infected? = 1 [
+  set time-since-infection time-since-infection + 1
+
+    let agefactor 0
+     if age = "over-75" [set agefactor 2]
+      if age = "60-74" [set agefactor 1]
+      if age = "20-59" [set agefactor 0.5]
+
+      let proba-complications proba-serious-symptoms * ((1 + comorbidity + agefactor) / 3)
+
+      let serious random 100
+
+ if viral-charge = "low"[
+   ifelse time-since-infection = recovery-time [
+      set infected? 0
+      set immune? 1
+    ][
+       if serious < proba-complications [
+      set serious-symptoms? 1
+      set viral-charge "high"
+      go-to-hospital
+    ]
+   ]
+  ]
+    if serious < proba-complications [
+      transfer-to-icu
+    ]
+  ]
+
+
+end
+
+
+to go-to-hospital
+  create-links-to hospitals
+  let my-sorted-links sort-on [link-length] my-links
+  let my-first-link item 0 my-sorted-links
+  let nearest-hospital [other-end] of my-first-link
+  set my-hospital nearest-hospital
+  move-to my-hospital
+  set mobile? 0
+end
+
+to transfer-to-icu
+  set in-icu? 1
+end
+
+to deliver-50-protection
+
+    let candidates people with [ alive? = 1 and use-protection = "no" ]
+  repeat 50 [if any? candidates [
+    ask one-of candidates [
+        set use-protection "yes"
+        ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
+      ]
+    ]
+  ]
+end
+
+
+to infect-people
+  if infected? = 1 [
+    if viral-charge = "low" [let infection-rate infection-proba-without-symptoms]
+    if viral-charge = "high" [ let infection-rate infection-proba-with-symptoms]
+
+  create-links-with people with [mobile? = 1] in-radius radius-infection
+  ask link-neighbors [
+  let rdn random 100
+;  if rdn <
+  ]
+  ]
+end
+
+to go-to-work
+
+end
+
+to go-shopping
+
+end
+
+to help-and-care
+
+end
+
+
+to update-behaviour
+
+end
+
+to treat-sick-people
+
+  ask people [get-cured]
+end
+
+to get-cured
+  set infected? 0
+  set immune? 1
+  set color blue
+  set size 1
+  set viral-charge "null"
+  ifelse in-icu? = 1[
+    ask my-hospital
+  [
+    set available-beds available-beds + 1
+  ]
+  ][
+      ask my-hospital
+  [
+    set available-icu-beds available-icu-beds + 1
+  ]
+    ]
+  set serious-symptoms? 0
+  set time-since-infection 0
+  setxy iresidence-xy
+
+    set my-hospital "null"
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-218
+586
 10
-759
+1127
 552
 -1
 -1
@@ -382,10 +532,10 @@ NIL
 1
 
 SLIDER
-5
-100
-177
-133
+4
+131
+148
+164
 max-pop-city
 max-pop-city
 200
@@ -397,25 +547,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-5
-65
-177
-98
+4
+96
+104
+129
 n-cities
 n-cities
 0
 10
-6.0
+5.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-767
-27
-939
-60
+1142
+44
+1244
+77
 under20
 under20
 0
@@ -427,10 +577,10 @@ under20
 HORIZONTAL
 
 SLIDER
-766
-60
-940
-93
+1245
+44
+1368
+77
 from20to59
 from20to59
 0
@@ -442,10 +592,10 @@ from20to59
 HORIZONTAL
 
 SLIDER
-768
-94
-940
-127
+1142
+78
+1314
+111
 from60to74
 from60to74
 0
@@ -457,10 +607,10 @@ from60to74
 HORIZONTAL
 
 SLIDER
-767
-146
-939
-179
+1141
+130
+1279
+163
 under24-activity
 under24-activity
 0
@@ -472,10 +622,10 @@ under24-activity
 HORIZONTAL
 
 SLIDER
-766
-179
-945
-212
+1278
+130
+1424
+163
 from25to49-activity
 from25to49-activity
 0
@@ -487,10 +637,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-767
-212
-946
-245
+1141
+164
+1320
+197
 from50to64-activity
 from50to64-activity
 0
@@ -502,10 +652,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-768
-262
-940
-295
+1139
+214
+1321
+247
 essential-industry
 essential-industry
 0
@@ -517,10 +667,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-768
-318
-940
-351
+1140
+264
+1249
+297
 elders-alone
 elders-alone
 0
@@ -532,10 +682,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-769
-351
-941
-384
+1249
+263
+1341
+296
 alone
 alone
 0
@@ -547,10 +697,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-768
-385
-940
-418
+1139
+297
+1231
+330
 couple
 couple
 0
@@ -562,10 +712,10 @@ couple
 HORIZONTAL
 
 SLIDER
-5
-195
-182
-228
+6
+203
+183
+236
 initial-proba-caring-away
 initial-proba-caring-away
 0
@@ -577,10 +727,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-949
-37
-1152
-70
+1138
+401
+1341
+434
 proba-secondary-home
 proba-secondary-home
 0
@@ -592,10 +742,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-947
-93
-1119
-126
+1143
+603
+1315
+636
 repatriated-share
 repatriated-share
 0
@@ -607,10 +757,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-769
-505
-941
-538
+1141
+468
+1313
+501
 proba-comorbidity
 proba-comorbidity
 0
@@ -622,10 +772,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-769
-437
-979
-470
+1140
+349
+1350
+382
 share-collective-housing
 share-collective-housing
 0
@@ -637,110 +787,110 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-770
-12
-920
-30
+1142
+29
+1292
+47
 age structure
 11
 0.0
 1
 
 TEXTBOX
-770
-131
-1064
-159
+1144
+115
+1438
+143
 activity rate (active vs. inactive/unemployed)
 11
 0.0
 1
 
 TEXTBOX
-771
-248
-1131
-290
-share of workers in essential industries (healthcare, etc.)
+1141
+199
+1416
+226
+share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-768
-300
-918
-318
+1140
+248
+1290
+266
 household composition 
 11
 0.0
 1
 
 TEXTBOX
-951
-20
-1208
-48
+1140
+384
+1397
+412
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-949
-76
-1240
-104
+1143
+587
+1434
+615
 people potentially repatriated from abroad\n
 11
 0.0
 1
 
 TEXTBOX
-770
-420
-1060
-448
+1141
+332
+1431
+360
 share of hosueholds living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-768
-472
-987
-514
+1140
+435
+1359
+477
 probability of having comorbidities (heart disease, cancer, diabetes)
 11
 0.0
 1
 
 TEXTBOX
-970
-327
-1120
-346
+1142
+10
+1292
+29
 FROM STATISTICS
 15
 16.0
 0
 
 TEXTBOX
-5
-179
-155
-197
+6
+187
+156
+205
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-6
-48
-156
-66
+5
+79
+155
+97
 Urban context
 11
 0.0
@@ -781,10 +931,10 @@ NIL
 1
 
 PLOT
-2
-229
-202
-379
+245
+166
+576
+316
 health-workers
 NIL
 NIL
@@ -797,35 +947,24 @@ false
 "" ""
 PENS
 "default" 1.0 0 -10899396 true "plot count people with [health-worker? = 1 and infected? = 0]" "plot count people with [health-worker? = 1 and infected? = 0]"
-"pen-1" 1.0 0 -6459832 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
+"pen-1" 1.0 0 -817084 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
 
 MONITOR
-76
-383
-181
-428
+471
+166
+576
+211
 healthcaretotal
 count people with [health-worker? = 1]
 17
 1
 11
 
-MONITOR
-5
-381
-74
-426
-total pop
-total-population
-17
-1
-11
-
 SLIDER
-950
-177
-1138
-210
+1143
+517
+1331
+550
 hospital-bed-per-100hab
 hospital-bed-per-100hab
 0
@@ -837,10 +976,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-951
-213
-1135
-246
+1144
+553
+1328
+586
 icu-bed-per-100hab
 icu-bed-per-100hab
 0
@@ -852,20 +991,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-950
-162
-1100
-180
+1143
+502
+1293
+520
 hospital statistics
 11
 0.0
 1
 
 MONITOR
-7
-428
-85
-473
+764
+558
+842
+603
 NIL
 total-beds
 17
@@ -873,10 +1012,10 @@ total-beds
 11
 
 MONITOR
-85
-428
-188
-473
+842
+558
+945
+603
 NIL
 total-icu-beds
 17
@@ -884,10 +1023,10 @@ total-icu-beds
 11
 
 MONITOR
-6
-474
-84
-519
+946
+559
+1024
+604
 avail. beds
 round (n-available-beds)
 17
@@ -895,10 +1034,10 @@ round (n-available-beds)
 11
 
 MONITOR
-85
-474
-187
-519
+1025
+559
+1127
+604
 avail. icu beds
 round (n-available-icu-beds)
 17
@@ -906,15 +1045,206 @@ round (n-available-icu-beds)
 11
 
 SLIDER
-4
-135
-176
-168
+106
+96
+218
+129
 link-radius
 link-radius
 0
 100
-15.0
+12.0
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+4
+53
+154
+71
+FREE PARAMETERS
+14
+16.0
+1
+
+PLOT
+244
+16
+577
+166
+situation
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -1184463 true "plot n-infected" "plot n-infected"
+"pen-1" 1.0 0 -13345367 true "plot n-recovered" "plot n-recovered"
+"pen-2" 1.0 0 -16777216 true "plot n-deaths\n " "plot n-deaths"
+"pen-3" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
+
+SLIDER
+4
+271
+231
+304
+infection-proba-without-symptoms
+infection-proba-without-symptoms
+0
+100
+5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+3
+305
+231
+338
+infection-proba-with-symptoms
+infection-proba-with-symptoms
+0
+100
+30.0
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+5
+255
+155
+273
+Epidemiological variables
+11
+0.0
+1
+
+MONITOR
+463
+16
+577
+61
+NIL
+total-population
+17
+1
+11
+
+SLIDER
+4
+338
+148
+371
+radius-infection
+radius-infection
+0
+10
+0.2
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+148
+338
+351
+371
+incubation-time-no-symptom
+incubation-time-no-symptom
+0
+20
+4.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+429
+329
+576
+362
+NIL
+infect-one-person
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+5
+372
+173
+405
+average-recovery-time
+average-recovery-time
+0
+30
+14.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+175
+372
+308
+405
+sd-recovery-time
+sd-recovery-time
+0
+10
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+429
+363
+576
+396
+Protection for 50
+deliver-50-protection
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+5
+406
+177
+439
+proba-serious-symptoms
+proba-serious-symptoms
+0
+100
+4.0
 1
 1
 NIL
@@ -1107,8 +1437,22 @@ Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300
 Rectangle -7500403 true true 127 79 172 94
 Polygon -7500403 true true 195 90 240 150 225 180 165 105
 Polygon -7500403 true true 105 90 60 150 75 180 135 105
-Rectangle -2674135 true false 120 90 135 135
-Rectangle -2674135 true false 105 105 150 120
+Polygon -2674135 true false 135 90 165 90 165 120 195 120 195 150 165 150 165 180 135 180 135 150 105 150 105 120 135 120
+
+health-worker-mask
+false
+0
+Circle -7500403 true true 110 5 80
+Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
+Rectangle -7500403 true true 127 79 172 94
+Polygon -7500403 true true 195 90 240 150 225 180 165 105
+Polygon -7500403 true true 105 90 60 150 75 180 135 105
+Polygon -7500403 true true 120 45 120 75 180 75 180 60
+Polygon -1 false false 120 45 180 45 180 75 120 75
+Polygon -1 true false 135 75 180 75 180 45 120 45 120 75
+Polygon -1 true false 60 150 75 180 60 210 45 180
+Polygon -1 true false 240 150 225 180 240 210 255 180
+Polygon -2674135 true false 135 120 135 90 165 90 165 120 195 120 195 150 165 150 165 180 135 180 135 150 105 150 105 120
 
 house
 false
@@ -1147,6 +1491,18 @@ Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300
 Rectangle -7500403 true true 127 79 172 94
 Polygon -7500403 true true 195 90 240 150 225 180 165 105
 Polygon -7500403 true true 105 90 60 150 75 180 135 105
+
+person-mask
+false
+0
+Circle -7500403 true true 110 5 80
+Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
+Rectangle -7500403 true true 127 79 172 94
+Polygon -7500403 true true 195 90 240 150 225 180 165 105
+Polygon -7500403 true true 105 90 60 150 75 180 135 105
+Polygon -1 true false 105 45 120 45 120 75 180 75 180 45 195 45
+Polygon -1 true false 60 150 75 180 60 210 45 180 60 150
+Polygon -1 true false 240 150 225 180 240 210 255 180
 
 plant
 false
