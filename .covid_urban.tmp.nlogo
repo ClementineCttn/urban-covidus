@@ -20,6 +20,7 @@ cities-own[
   ;;jobs
   id
   health-workers
+  hospital?
 ]
 
 hospitals-own[
@@ -64,8 +65,16 @@ to setup
   setup-cities
   setup-people
   setup-hospitals
+  setup-city-links
   update-globals
   reset-ticks
+end
+
+to setup-city-links
+   ask cities [
+    create-links-with other cities in-radius link-radius
+    create-link-with one-of other cities with [id < n-cities / 2]
+  ]
 end
 
 to setup-cities
@@ -76,7 +85,7 @@ to setup-cities
     while [
       [pcolor] of patch-here != white
     ] [ setxy random-xcor random-ycor ]
-    set city-id i
+    set id i
     set population max-pop-city / i
     set shape "circle"
     set color pink
@@ -106,6 +115,11 @@ to setup-cities
    ;; in france in 2018 : 3 icu beds per 1000 hab. = 0.3%
    set total-population round ( sum [population] of cities )
 
+
+ ; ask cities with [id = 1] [create-links-with cities with [id = 2]]
+ ; ask cities with [count my-links = 0] [
+ ;   create-links-with cities with [id = 1]
+ ; ]
 end
 
 to setup-hospitals
@@ -127,6 +141,7 @@ to setup-hospitals
 
 
   ask cities with [population > max-pop-city / 3][
+    set hospital?
 
     let share-population population / sum [population] of cities with [population > max-pop-city / 3]
 
@@ -134,6 +149,7 @@ to setup-hospitals
       sprout-hospitals 1 [
     set shape "house"
       set size 2
+        set color blue
         set beds share-population * total-beds
         set icu-beds share-population * total-icu-beds
         set health-workers count people with [health-worker? = 1 and residence-city = [city-id] of myself]
@@ -374,7 +390,7 @@ max-pop-city
 max-pop-city
 200
 10000
-1000.0
+1300.0
 100
 1
 NIL
@@ -389,7 +405,7 @@ n-cities
 n-cities
 0
 10
-5.0
+6.0
 1
 1
 NIL
@@ -546,10 +562,10 @@ couple
 HORIZONTAL
 
 SLIDER
-2
-168
-179
-201
+5
+195
+182
+228
 initial-proba-caring-away
 initial-proba-caring-away
 0
@@ -711,10 +727,10 @@ FROM STATISTICS
 0
 
 TEXTBOX
-2
-152
-152
-170
+5
+179
+155
+197
 Unknown statistics
 11
 0.0
@@ -765,10 +781,10 @@ NIL
 1
 
 PLOT
-22
-232
-222
-382
+2
+229
+202
+379
 health-workers
 NIL
 NIL
@@ -784,10 +800,10 @@ PENS
 "pen-1" 1.0 0 -6459832 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
 
 MONITOR
-95
-384
-200
-429
+76
+383
+181
+428
 healthcaretotal
 count people with [health-worker? = 1]
 17
@@ -795,10 +811,10 @@ count people with [health-worker? = 1]
 11
 
 MONITOR
-24
-382
-93
-427
+5
+381
+74
+426
 total pop
 total-population
 17
@@ -846,10 +862,10 @@ hospital statistics
 1
 
 MONITOR
-18
-434
-96
-479
+7
+428
+85
+473
 NIL
 total-beds
 17
@@ -857,10 +873,10 @@ total-beds
 11
 
 MONITOR
-96
-434
-199
-479
+85
+428
+188
+473
 NIL
 total-icu-beds
 17
@@ -868,10 +884,10 @@ total-icu-beds
 11
 
 MONITOR
-17
-480
-95
-525
+6
+474
+84
+519
 avail. beds
 round (n-available-beds)
 17
@@ -879,15 +895,30 @@ round (n-available-beds)
 11
 
 MONITOR
-96
-480
-162
-525
-avail. icu
+85
+474
+187
+519
+avail. icu beds
 round (n-available-icu-beds)
 17
 1
 11
+
+SLIDER
+4
+135
+176
+168
+link-radius
+link-radius
+0
+100
+15.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

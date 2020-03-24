@@ -3,17 +3,32 @@ globals[
   n-recovered
   n-deaths
   n-available-beds
+  n-available-icu-beds
+
+  total-population
+  total-hospitals
+  total-beds
+  total-icu-beds
 ]
 
 breed [cities city]
 breed [people person]
+breed [hospitals hospital]
 
 cities-own[
   population
-  jobs
-  hospital
-  available-beds
+  ;;jobs
+  id
   health-workers
+  hospital?
+]
+
+hospitals-own[
+  health-workers
+  beds
+  icu-beds
+  available-beds
+  available-icu-beds
 ]
 
 patches-own[
@@ -33,6 +48,7 @@ people-own[
   age ;; under-20 / 20-59 / 60-74 / over-75
   active ;; 1 = at work / 0 = inactive or looking for work
   work-status ;; essential / non-essential
+  health-worker? ;; 0/1
   household-status ;; alone / couple / with-children
   caring-away-status ;; care / no-care
   residence-city ;;
@@ -48,7 +64,17 @@ to setup
   ca
   setup-cities
   setup-people
+  setup-hospitals
+  setup-city-links
+  update-globals
   reset-ticks
+end
+
+to setup-city-links
+   ask cities [
+    create-links-with other cities in-radius link-radius
+    create-link-with one-of other cities with [hospital? = 1]
+  ]
 end
 
 to setup-cities
@@ -59,11 +85,13 @@ to setup-cities
     while [
       [pcolor] of patch-here != white
     ] [ setxy random-xcor random-ycor ]
+    set id i
     set population max-pop-city / i
     set shape "circle"
     set color pink
     set size population / 100
     let p population / 100
+     set hospital? 0
     ask patch-here [
       set pcolor 120 + i
       set city-id i
@@ -78,8 +106,71 @@ to setup-cities
         set density round (n-cities - i + 2) / 2
       ]
     ]
+
+
     set i i + 1
   ]
+
+  ;; source OCDE (2020), Lits d’hôpitaux (indicateur). doi: 10.1787/9b82df80-fr (Consulté le 24 mars 2020)
+  ;; in france in 2018 : 6 hospital beds per 1000 hab. = 0.6%
+   ;; in france in 2018 : 3 icu beds per 1000 hab. = 0.3%
+   set total-population round ( sum [population] of cities )
+
+
+ ; ask cities with [id = 1] [create-links-with cities with [id = 2]]
+ ; ask cities with [count my-links = 0] [
+ ;   create-links-with cities with [id = 1]
+ ; ]
+end
+
+to setup-hospitals
+
+
+  ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
+
+   ;;;  Hospitals not realistic...
+
+   ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
+
+
+
+;;  ;; Source : DREES, Panorama des établissements de santé, édition 2017
+;;  ;; in France: 3 089 hospitals and 408 245 beds, so 132 beds per hospital
+;;
+   set total-beds round ( total-population * hospital-bed-per-100hab / 100 )
+  set total-icu-beds round ( total-population * icu-bed-per-100hab / 100 )
+
+
+  ask cities with [population > max-pop-city / 3][
+    set hospital? 1
+
+    let share-population population / sum [population] of cities with [population > max-pop-city / 3]
+
+    ask patch-here [
+      sprout-hospitals 1 [
+    set shape "house"
+      set size 2
+        set color blue
+        set beds share-population * total-beds
+        set icu-beds share-population * total-icu-beds
+        set health-workers count people with [health-worker? = 1 and residence-city = [city-id] of myself]
+        set available-beds beds
+        set available-icu-beds icu-beds
+    ]
+  ]
+  ]
+   set total-hospitals count hospitals
+  set n-available-beds sum [available-beds] of hospitals
+  set n-available-icu-beds sum [available-icu-beds] of hospitals
+
+  ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
+
+
+   ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
+
+
+
+
 end
 
 
@@ -92,7 +183,7 @@ to setup-people
       set ycor ycor - 0.5 + random-float 1
       set shape "person"
       set color black
-      set size 1
+      set size 0.5
 
       set alive? 1
       set infected? 0
@@ -136,9 +227,22 @@ to setup-people
       ;; distribution of active workers by professions in France in 2016 https://www.insee.fr/fr/statistiques/3303413?sommaire=3353488
       ;; large estimate of essential workers = 46.6%
       ;; 7.1% (human health) + 7.4% social + 12.9% commerce + 9.1% public admin + 4.6% finance + 5.5% Transport
+      ;;share of human health in essential = 15.2%
+
      let c random-float 100
+      let z random-float 100
+
        if [active] of self = 1 [
-        ifelse (c < essential-industry) [set work-status "essential"][set work-status "non-essential"]
+        ifelse (c < essential-industry) [
+          set work-status "essential"
+            ifelse (z < 15.2) [
+          set health-worker? 1
+        ][
+          set health-worker? 0
+        ]
+        ][
+          set work-status "non-essential"
+        ]
       ]
 
 
@@ -202,10 +306,11 @@ to setup-people
 end
 
 to assign-color
-  ask people with [infected? = 0][ set color green ]
-  ask people with [infected? = 1][ set color red ]
+  ask people with [infected? = 0][ set color 67 set size 1]
+  ask people with [infected? = 1][ set color yellow set size 1.5]
   ask people with [immune? = 1][ set color blue ]
-  ask people with [alive? = 0][ set color black ]
+  ask people with [alive? = 0][ set color black set size 1 set shape "x"]
+  ask people with [health-worker? = 1][set size 1.5 set shape "health-worker"]
 end
 
 
@@ -213,7 +318,8 @@ to go
 
   if all? turtles [infected? = 0]
     [ stop ]
-
+  if all? turtles [alive? = 0]
+    [ stop ]
 
   ask turtles
     [ assign-color
@@ -223,6 +329,13 @@ to go
 
 end
 
+to update-globals
+ set n-infected count people with [infected? = 1]
+ set n-recovered count people with [immune? = 1]
+ set n-deaths count people with [alive? = 0]
+ set n-available-beds sum [available-beds] of hospitals
+ set n-available-icu-beds sum [available-icu-beds] of hospitals
+end
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -278,7 +391,7 @@ max-pop-city
 max-pop-city
 200
 10000
-1100.0
+1300.0
 100
 1
 NIL
@@ -293,7 +406,7 @@ n-cities
 n-cities
 0
 10
-7.0
+6.0
 1
 1
 NIL
@@ -450,10 +563,10 @@ couple
 HORIZONTAL
 
 SLIDER
-2
-168
-179
-201
+5
+195
+182
+228
 initial-proba-caring-away
 initial-proba-caring-away
 0
@@ -605,20 +718,20 @@ probability of having comorbidities (heart disease, cancer, diabetes)
 1
 
 TEXTBOX
-977
-182
-1127
-201
+970
+327
+1120
+346
 FROM STATISTICS
 15
 16.0
 0
 
 TEXTBOX
-2
-152
-152
-170
+5
+179
+155
+197
 Unknown statistics
 11
 0.0
@@ -667,6 +780,146 @@ NIL
 NIL
 NIL
 1
+
+PLOT
+2
+229
+202
+379
+health-workers
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -10899396 true "plot count people with [health-worker? = 1 and infected? = 0]" "plot count people with [health-worker? = 1 and infected? = 0]"
+"pen-1" 1.0 0 -6459832 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
+
+MONITOR
+76
+383
+181
+428
+healthcaretotal
+count people with [health-worker? = 1]
+17
+1
+11
+
+MONITOR
+5
+381
+74
+426
+total pop
+total-population
+17
+1
+11
+
+SLIDER
+950
+177
+1138
+210
+hospital-bed-per-100hab
+hospital-bed-per-100hab
+0
+20
+0.6
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+951
+213
+1135
+246
+icu-bed-per-100hab
+icu-bed-per-100hab
+0
+20
+0.3
+0.1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+950
+162
+1100
+180
+hospital statistics
+11
+0.0
+1
+
+MONITOR
+7
+428
+85
+473
+NIL
+total-beds
+17
+1
+11
+
+MONITOR
+85
+428
+188
+473
+NIL
+total-icu-beds
+17
+1
+11
+
+MONITOR
+6
+474
+84
+519
+avail. beds
+round (n-available-beds)
+17
+1
+11
+
+MONITOR
+85
+474
+187
+519
+avail. icu beds
+round (n-available-icu-beds)
+17
+1
+11
+
+SLIDER
+4
+135
+176
+168
+link-radius
+link-radius
+0
+100
+12.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -846,6 +1099,17 @@ Circle -7500403 true true 96 51 108
 Circle -16777216 true false 113 68 74
 Polygon -10899396 true false 189 233 219 188 249 173 279 188 234 218
 Polygon -10899396 true false 180 255 150 210 105 210 75 240 135 240
+
+health-worker
+false
+0
+Circle -7500403 true true 110 5 80
+Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
+Rectangle -7500403 true true 127 79 172 94
+Polygon -7500403 true true 195 90 240 150 225 180 165 105
+Polygon -7500403 true true 105 90 60 150 75 180 135 105
+Rectangle -2674135 true false 120 90 135 135
+Rectangle -2674135 true false 105 105 150 120
 
 house
 false
