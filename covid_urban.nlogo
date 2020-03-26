@@ -39,6 +39,7 @@ hospitals-own[
 jobs-own[
   type-job
   worker ;-id
+  is-shop?
 ]
 
 patches-own[
@@ -52,7 +53,7 @@ people-own[
   serious-symptoms? ;; 0/1
   mobile? ;; 0/1
   immune? ;; 0/1
-  time-since-infection ;; 0-...
+  time-at-infection
   recovery-time ;; 0-...
   viral-charge ;; high / medium / low
   use-protection ;; yes / no / partially
@@ -91,6 +92,8 @@ to setup
 
   update-globals
   reset-ticks
+   infect-one-person
+
 end
 
 to setup-city-links
@@ -225,7 +228,7 @@ to setup-people
       set mobile? 1
       set serious-symptoms? 0
       set immune? 0
-      set time-since-infection 0
+      set time-at-infection 0
       set viral-charge "null"
       set residence-city idc
       set in-icu? 0
@@ -337,7 +340,6 @@ to setup-people
 
     ]
   ]
- infect-one-person
 
    assign-color
 end
@@ -348,8 +350,8 @@ to assign-color
   ask people with [immune? = 1][ set color blue ]
   ask people with [alive? = 0][ set color black set size 1 set shape "x"]
   ask people with [health-worker? = 1][set size 1.5 set shape "health-worker"]
-  ask hospitals with [available-beds  = 0] [ set color red ]
-  ask hospitals with [available-beds > 0] [ set color blue ]
+  ask hospitals with [available-beds  = 0] [ set color red set size 3]
+  ask hospitals with [available-beds > 0] [ set color blue set size 2]
 end
 
 
@@ -373,6 +375,7 @@ to setup-jobs
         set shape "square"
         set size 0.7
         set color 5
+        set is-shop? 0
         set type-job "essential"
         set worker one-of non-health-essential-workers-agentset in-radius link-radius
         ask worker [set job-id myself]
@@ -386,8 +389,16 @@ to setup-jobs
 
   ]
 
-end
+  let n-shops min (list (shop-per-100-inhab * total-population / 100)  (non-health-essential-jobs))
+  while [ n-shops >= 1 ] [
+    ask one-of jobs with [is-shop? = 0] [
+      set is-shop? 1
+      set color 125
+      set n-shops n-shops - 1
+    ]
+  ]
 
+end
 
 
 
@@ -399,13 +410,11 @@ to go
     [ stop ]
 
   ask people [
-  update-infection-status
   go-to-work
   go-shopping
   help-and-care
-  ;go-to-hospital
-  infect-people
-    update-infection-status]
+  update-infection-status
+  ]
 
   let max-density  max [count people-here] of patches
   ask patches with [pcolor != 0] [
@@ -414,7 +423,6 @@ to go
 
    ask people [
   go-home
-   infect-people
   update-infection-status
   update-behaviour
   ]
@@ -452,11 +460,12 @@ to start-infection
   set color yellow
   set size 1.2
   set viral-charge "low"
+  set time-at-infection ticks
 end
 
 to update-infection-status
   if infected? = 1 [
-  set time-since-infection time-since-infection + 1
+  let time-since-infection ticks - time-at-infection
 
     let agefactor 0
      if age = "over-75" [set agefactor 2]
@@ -513,8 +522,9 @@ to go-to-hospital
 
     ]
   ]
+   ask my-links [die]
+  infect-people
 
-  ask my-links [die]
 end
 
 to transfer-to-icu
@@ -582,7 +592,7 @@ to infect-people
   create-links-with other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection
   ask link-neighbors [
   let rdn random 100
-      if rdn < [infection-rate] of myself[
+      if rdn < [infection-rate] of myself and use-protection = "no"[
    start-infection
       ]
   ]
@@ -593,16 +603,32 @@ end
 to go-to-work
  if job-id != 0[
     move-to [patch-here] of job-id
+    infect-people
   ]
 
 end
 
 to go-shopping
+ if mobile? = 1[
 
+    if random average-days-between-shopping = 1[
+
+    let my-shop one-of jobs with [is-shop? = 1] in-radius radius-movement
+    if is-turtle? my-shop[
+    move-to [patch-here] of my-shop
+    infect-people
+    ]
+  ]
+  ]
 end
 
 to help-and-care
-
+  if caring-away-status = "care" [
+    if random average-days-between-care = 1[
+    move-to one-of people in-radius radius-movement
+    infect-people
+  ]
+  ]
 end
 
 
@@ -618,6 +644,7 @@ end
 to  go-home
   ask people [
     setxy item 0 residence-xy item 1 residence-xy
+    infect-people
   ]
 end
 
@@ -645,7 +672,7 @@ to get-cured
     set in-hospital? 0
   ]
   set serious-symptoms? 0
-  set time-since-infection 0
+  set time-at-infection 0
   setxy item 0 residence-xy item 1 residence-xy
 
     set my-hospital "null"
@@ -696,10 +723,10 @@ NIL
 1
 
 SLIDER
-4
-131
-148
-164
+294
+379
+438
+412
 max-pop-city
 max-pop-city
 200
@@ -711,15 +738,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-4
-96
-104
-129
+294
+344
+394
+377
 n-cities
 n-cities
 0
 10
-6.0
+5.0
 1
 1
 NIL
@@ -876,10 +903,10 @@ couple
 HORIZONTAL
 
 SLIDER
-6
-203
-183
-236
+8
+282
+185
+315
 initial-proba-caring-away
 initial-proba-caring-away
 0
@@ -1041,20 +1068,20 @@ FROM STATISTICS
 0
 
 TEXTBOX
-6
-187
-156
-205
+8
+266
+158
+284
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-5
-79
-155
-97
+295
+327
+445
+345
 Urban context
 11
 0.0
@@ -1095,10 +1122,10 @@ NIL
 1
 
 PLOT
-245
-166
-576
-316
+279
+165
+577
+315
 health-workers
 NIL
 NIL
@@ -1189,9 +1216,9 @@ total-icu-beds
 
 MONITOR
 946
-559
+558
 1024
-604
+603
 avail. beds
 round (n-available-beds)
 17
@@ -1200,9 +1227,9 @@ round (n-available-beds)
 
 MONITOR
 1025
-559
+558
 1127
-604
+603
 avail. icu beds
 round (n-available-icu-beds)
 17
@@ -1210,10 +1237,10 @@ round (n-available-icu-beds)
 11
 
 SLIDER
-106
-96
-218
-129
+396
+344
+508
+377
 link-radius
 link-radius
 0
@@ -1225,20 +1252,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-4
-53
-154
-71
+6
+246
+156
+264
 FREE PARAMETERS
 14
 16.0
 1
 
 PLOT
-244
-16
-577
-166
+278
+15
+578
+165
 situation
 NIL
 NIL
@@ -1256,40 +1283,40 @@ PENS
 "susceptible" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-4
-271
-231
-304
+9
+439
+236
+472
 infection-proba-without-symptoms
 infection-proba-without-symptoms
 0
 100
-5.0
+2.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-3
-305
-231
-338
+237
+439
+446
+472
 infection-proba-with-symptoms
 infection-proba-with-symptoms
 0
 100
-30.0
+11.0
 1
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-5
-255
-155
-273
+10
+423
+160
+441
 Epidemiological variables
 11
 0.0
@@ -1307,40 +1334,40 @@ total-population
 11
 
 SLIDER
-4
-338
-148
-371
+447
+439
+576
+472
 radius-infection
 radius-infection
 0
 10
-1.2
+0.7
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-148
-338
-351
-371
+9
+472
+205
+505
 incubation-time-no-symptom
 incubation-time-no-symptom
 0
 20
-4.0
+6.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-429
-329
-576
-362
+11
+110
+126
+143
 NIL
 infect-one-person
 NIL
@@ -1354,10 +1381,10 @@ NIL
 1
 
 SLIDER
-5
-372
-173
-405
+205
+472
+373
+505
 average-recovery-time
 average-recovery-time
 0
@@ -1369,10 +1396,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-175
-372
-308
-405
+373
+472
+506
+505
 sd-recovery-time
 sd-recovery-time
 0
@@ -1384,10 +1411,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-429
-363
-576
-396
+127
+110
+242
+143
 Protection for 50
 deliver-50-protection
 NIL
@@ -1401,10 +1428,10 @@ NIL
 1
 
 SLIDER
-5
-406
-177
-439
+9
+506
+181
+539
 proba-serious-symptoms
 proba-serious-symptoms
 0
@@ -1416,10 +1443,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-498
-397
+527
+315
 577
-442
+360
 dead
 count people with [alive? = 0]
 17
@@ -1427,25 +1454,25 @@ count people with [alive? = 0]
 11
 
 SLIDER
-178
-406
-371
-439
+182
+506
+375
+539
 proba-to-die-when-serious
 proba-to-die-when-serious
 0
 100
-50.0
+35.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-4
-439
-179
-472
+376
+506
+551
+539
 mortality-reduction-in-icu
 mortality-reduction-in-icu
 0
@@ -1455,6 +1482,77 @@ mortality-reduction-in-icu
 1
 NIL
 HORIZONTAL
+
+SLIDER
+8
+348
+228
+381
+average-days-between-shopping
+average-days-between-shopping
+0
+10
+4.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+8
+315
+197
+348
+average-days-between-care
+average-days-between-care
+0
+10
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+8
+380
+152
+413
+shop-per-100-inhab
+shop-per-100-inhab
+0
+20
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+152
+380
+286
+413
+radius-movement
+radius-movement
+0
+20
+6.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+11
+76
+261
+109
+systematic-protection-for-sick
+systematic-protection-for-sick
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
