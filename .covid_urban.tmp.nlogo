@@ -56,7 +56,7 @@ people-own[
   time-at-infection
   recovery-time ;; 0-...
   viral-charge ;; high / medium / low
-  use-protection ;; yes / no / partially
+  use-protection? ;; 0/1
   age ;; under-20 / 20-59 / 60-74 / over-75
   active ;; 1 = at work / 0 = inactive or looking for work
   work-status ;; essential / non-essential
@@ -88,6 +88,10 @@ to setup
 
   ask patches with [pcolor != 0] [
     set pcolor scale-color orange count people-here max [count people-here] of patches 0
+  ]
+
+  if good-protection-at-hospital = "on" [
+    ask people with [health-worker? = 1] [set use-protection? 1]
   ]
 
   update-globals
@@ -232,7 +236,7 @@ to setup-people
       set viral-charge "null"
       set residence-city idc
       set in-icu? 0
-      set use-protection "no"
+      set use-protection? 0
       set infection-rate 0
       set job-id 0
         set in-hospital? 0
@@ -518,6 +522,8 @@ to go-to-hospital
           set in-hospital? 1
          move-to [patch-here] of my-hospital
         set mobile? 0
+        set use-protection? 1
+             ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
         ]
 
     ]
@@ -573,10 +579,10 @@ end
 
 to deliver-50-protection
 
-    let candidates people with [ alive? = 1 and use-protection = "no" ]
+    let candidates people with [ alive? = 1 and use-protection? = 0 ]
   repeat 50 [if any? candidates [
     ask one-of candidates [
-        set use-protection "yes"
+        set use-protection? 1
         ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
       ]
     ]
@@ -592,7 +598,7 @@ to infect-people
   create-links-with other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection
   ask link-neighbors [
   let rdn random 100
-      if rdn < [infection-rate] of myself and use-protection = "no"[
+      if rdn < [infection-rate] of myself and use-protection? = 0[
    start-infection
       ]
   ]
@@ -723,10 +729,10 @@ NIL
 1
 
 SLIDER
-4
-131
-148
-164
+294
+379
+438
+412
 max-pop-city
 max-pop-city
 200
@@ -738,10 +744,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-4
-96
-104
-129
+294
+344
+394
+377
 n-cities
 n-cities
 0
@@ -904,9 +910,9 @@ HORIZONTAL
 
 SLIDER
 8
-275
+282
 185
-308
+315
 initial-proba-caring-away
 initial-proba-caring-away
 0
@@ -1069,19 +1075,19 @@ FROM STATISTICS
 
 TEXTBOX
 8
-259
+266
 158
-277
+284
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-5
-79
-155
-97
+295
+327
+445
+345
 Urban context
 11
 0.0
@@ -1237,25 +1243,25 @@ round (n-available-icu-beds)
 11
 
 SLIDER
-106
-96
-218
-129
+396
+344
+508
+377
 link-radius
 link-radius
 0
 100
-12.0
+11.0
 1
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-4
-53
-154
-71
+6
+246
+156
+264
 FREE PARAMETERS
 14
 16.0
@@ -1306,7 +1312,7 @@ infection-proba-with-symptoms
 infection-proba-with-symptoms
 0
 100
-11.0
+9.0
 1
 1
 NIL
@@ -1364,10 +1370,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-5
-180
-120
-213
+11
+110
+126
+143
 NIL
 infect-one-person
 NIL
@@ -1411,10 +1417,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-121
-180
-236
-213
+127
+110
+242
+143
 Protection for 50
 deliver-50-protection
 NIL
@@ -1485,9 +1491,9 @@ HORIZONTAL
 
 SLIDER
 8
-341
+348
 228
-374
+381
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -1500,9 +1506,9 @@ HORIZONTAL
 
 SLIDER
 8
-308
+315
 197
-341
+348
 average-days-between-care
 average-days-between-care
 0
@@ -1515,9 +1521,9 @@ HORIZONTAL
 
 SLIDER
 8
-373
+380
 152
-406
+413
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -1530,27 +1536,27 @@ HORIZONTAL
 
 SLIDER
 152
-373
-286
-406
+380
+278
+413
 radius-movement
 radius-movement
 0
 20
-6.0
+5.0
 1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-130
-222
-380
-255
-systematic-protection-for-sick
-systematic-protection-for-sick
-1
+11
+76
+261
+109
+good-protection-at-hospital
+good-protection-at-hospital
+0
 1
 -1000
 

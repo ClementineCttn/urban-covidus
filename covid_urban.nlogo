@@ -56,7 +56,7 @@ people-own[
   time-at-infection
   recovery-time ;; 0-...
   viral-charge ;; high / medium / low
-  use-protection ;; yes / no / partially
+  use-protection? ;; 0/1
   age ;; under-20 / 20-59 / 60-74 / over-75
   active ;; 1 = at work / 0 = inactive or looking for work
   work-status ;; essential / non-essential
@@ -88,6 +88,10 @@ to setup
 
   ask patches with [pcolor != 0] [
     set pcolor scale-color orange count people-here max [count people-here] of patches 0
+  ]
+
+  if good-protection-at-hospital = "on" [
+    ask people with [health-worker? = 1] [set use-protection? 1]
   ]
 
   update-globals
@@ -232,7 +236,7 @@ to setup-people
       set viral-charge "null"
       set residence-city idc
       set in-icu? 0
-      set use-protection "no"
+      set use-protection? 0
       set infection-rate 0
       set job-id 0
         set in-hospital? 0
@@ -518,6 +522,8 @@ to go-to-hospital
           set in-hospital? 1
          move-to [patch-here] of my-hospital
         set mobile? 0
+        set use-protection? 1
+             ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
         ]
 
     ]
@@ -573,10 +579,10 @@ end
 
 to deliver-50-protection
 
-    let candidates people with [ alive? = 1 and use-protection = "no" ]
+    let candidates people with [ alive? = 1 and use-protection? = 0 ]
   repeat 50 [if any? candidates [
     ask one-of candidates [
-        set use-protection "yes"
+        set use-protection? 1
         ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
       ]
     ]
@@ -592,7 +598,7 @@ to infect-people
   create-links-with other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection
   ask link-neighbors [
   let rdn random 100
-      if rdn < [infection-rate] of myself and use-protection = "no"[
+      if rdn < [infection-rate] of myself and use-protection? = 0[
    start-infection
       ]
   ]
@@ -1548,8 +1554,8 @@ SWITCH
 76
 261
 109
-systematic-protection-for-sick
-systematic-protection-for-sick
+good-protection-at-hospital
+good-protection-at-hospital
 1
 1
 -1000
