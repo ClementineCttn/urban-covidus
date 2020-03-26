@@ -729,9 +729,9 @@ NIL
 1
 
 SLIDER
-294
+304
 379
-438
+448
 412
 max-pop-city
 max-pop-city
@@ -744,9 +744,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-294
+304
 344
-394
+404
 377
 n-cities
 n-cities
@@ -1084,9 +1084,9 @@ Unknown statistics
 1
 
 TEXTBOX
-295
+305
 327
-445
+455
 345
 Urban context
 11
@@ -1243,15 +1243,15 @@ round (n-available-icu-beds)
 11
 
 SLIDER
-396
+406
 344
-508
+518
 377
 link-radius
 link-radius
 0
 100
-12.0
+11.0
 1
 1
 NIL
@@ -1312,7 +1312,7 @@ infection-proba-with-symptoms
 infection-proba-with-symptoms
 0
 100
-11.0
+9.0
 1
 1
 NIL
@@ -1537,13 +1537,13 @@ HORIZONTAL
 SLIDER
 152
 380
-286
+278
 413
 radius-movement
 radius-movement
 0
 20
-6.0
+5.0
 1
 1
 NIL
@@ -1556,7 +1556,7 @@ SWITCH
 109
 good-protection-at-hospital
 good-protection-at-hospital
-1
+0
 1
 -1000
 
