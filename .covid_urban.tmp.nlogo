@@ -73,6 +73,7 @@ people-own[
   my-hospital
   in-icu?
   infection-rate
+  job-id
 ]
 
 to setup
@@ -82,6 +83,11 @@ to setup
   setup-hospitals
   setup-city-links
   setup-jobs
+
+  ask patches with [pcolor != 0] [
+    set pcolor scale-color orange count people-here max [count people-here] of patches 0
+  ]
+
   update-globals
   reset-ticks
 end
@@ -95,18 +101,18 @@ end
 
 
 to setup-cities
-  ask patches [set pcolor 9]
+  ask patches [set pcolor 0]
    let i 1
   create-cities n-cities [
     setxy random-xcor random-ycor
     while [
-      [pcolor] of patch-here != 9
+      [pcolor] of patch-here != 0
     ] [ setxy random-xcor random-ycor ]
     set id i
     set population max-pop-city / i
-    set shape "circle"
-    set color pink
-    set size population / 100
+    ;set shape "circle"
+    ;set color pink
+    set size 0
     let p population / 100
      set hospital? 0
     ask patch-here [
@@ -170,7 +176,13 @@ to setup-hospitals
         set color blue
         set beds share-population * total-beds
         set icu-beds share-population * total-icu-beds
-        set health-workers count people with [health-worker? = 1 and residence-city = [city-id] of myself]
+        let health-workers-agentset people with [health-worker? = 1 and residence-city = [city-id] of myself]
+        set health-workers count health-workers-agentset
+
+        ask health-workers-agentset [
+          set job-id myself
+        ]
+
         set available-beds beds
         set available-icu-beds icu-beds
     ]
@@ -179,6 +191,10 @@ to setup-hospitals
    set total-hospitals count hospitals
   set n-available-beds sum [available-beds] of hospitals
   set n-available-icu-beds sum [available-icu-beds] of hospitals
+
+  ask people with [health-worker? = 1 and job-id = 0][
+    set job-id one-of hospitals
+    ]
 
   ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
 
@@ -192,7 +208,7 @@ end
 
 
 to setup-people
-  ask patches with [pcolor != 9] [
+  ask patches with [pcolor != 0] [
     let idc [city-id] of self
     let dens [density] of self
     sprout-people dens [
@@ -214,6 +230,7 @@ to setup-people
       set in-icu? 0
       set use-protection "no"
       set infection-rate 0
+      set job-id 0
 
       set recovery-time random-normal average-recovery-time sd-recovery-time
 
@@ -347,15 +364,16 @@ to setup-jobs
   let non-health-essential-workers-agentset people with [work-status = "essential" and health-worker? = 0]
 
      while [any? non-health-essential-workers-agentset]  [
-   ask patches with [pcolor != 9] [
+   ask patches with [pcolor != 0] [
    ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.5)  ( count non-health-essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "box"
-        set size 0.9
-        set color white
+        set size 0.7
+        set color red
         set type-job "essential"
         set worker one-of non-health-essential-workers-agentset in-radius link-radius
+        ask worker [set job-id myself]
        ; set worker-id [who] of worker
         ask non-health-essential-workers-agentset [
           let worker-to-remove [worker] of myself
@@ -385,13 +403,28 @@ to go
   help-and-care
   ;go-to-hospital
   infect-people
+    update-infection-status]
 
+  let max-density  max [count people-here] of patches
+  ask patches with [pcolor != 0] [
+    set pcolor scale-color orange sqrt count people-here sqrt max-density 0
+  ]
+
+   ask people [
+  go-home
+   infect-people
+  update-infection-status
   update-behaviour
   ]
 
   ask hospitals [
    treat-sick-people
   ]
+
+   ask patches with [pcolor != 0] [
+    set pcolor scale-color orange sqrt count people-here sqrt max-density  0
+  ]
+
    update-globals
    assign-color
   tick
@@ -415,7 +448,7 @@ end
 to start-infection
   set infected? 1
   set color yellow
-  set size 1.5
+  set size 1.
   set viral-charge "low"
 end
 
@@ -505,13 +538,10 @@ to infect-people
 end
 
 to go-to-work
-  ask people with [work-status = "essential"][
-    ifelse health-worker? = 1 [
-
-    ][
-
-    ]
+ if job-id != 0[
+    move-to [patch-here] of job-id
   ]
+
 end
 
 to go-shopping
@@ -531,6 +561,13 @@ to treat-sick-people
 
  ; ask people  [get-cured]
 end
+
+to  go-home
+  ask people [
+    setxy item 0 residence-xy item 1 residence-xy
+  ]
+end
+
 
 to get-cured
   set infected? 0
@@ -1015,17 +1052,18 @@ NIL
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -10899396 true "plot count people with [health-worker? = 1 and infected? = 0]" "plot count people with [health-worker? = 1 and infected? = 0]"
-"pen-1" 1.0 0 -817084 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
+"susceptible" 1.0 0 -10899396 true "plot count people with [health-worker? = 1 and infected? = 0 and immune? = 0]" "plot count people with [health-worker? = 1 and infected? = 0 and immune? = 0]"
+"infected" 1.0 0 -817084 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
+"immune" 1.0 0 -8275240 true "plot count people with [health-worker? = 1 and  immune? = 1]" "plot count people with [health-worker? = 1 and immune? = 1]"
 
 MONITOR
-471
-166
-576
-211
+498
+270
+575
+315
 healthcaretotal
 count people with [health-worker? = 1]
 17
@@ -1154,13 +1192,13 @@ NIL
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -1184463 true "plot n-infected" "plot n-infected"
-"pen-1" 1.0 0 -13345367 true "plot n-recovered" "plot n-recovered"
-"pen-2" 1.0 0 -16777216 true "plot n-deaths\n " "plot n-deaths"
-"pen-3" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
+"infected" 1.0 0 -1184463 true "plot n-infected" "plot n-infected"
+"recovered" 1.0 0 -13345367 true "plot n-recovered" "plot n-recovered"
+"dead" 1.0 0 -16777216 true "plot n-deaths\n " "plot n-deaths"
+"susceptible" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
 4
@@ -1203,10 +1241,10 @@ Epidemiological variables
 1
 
 MONITOR
-463
-16
-577
-61
+496
+96
+573
+141
 NIL
 total-population
 17
