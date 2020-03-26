@@ -71,6 +71,7 @@ people-own[
   comorbidity ;; 0/1
   repatriated ;; 0/1
   my-hospital
+  in-hospital?
   in-icu?
   infection-rate
   job-id
@@ -231,6 +232,7 @@ to setup-people
       set use-protection "no"
       set infection-rate 0
       set job-id 0
+        set in-hospital? 0
 
       set recovery-time random-normal average-recovery-time sd-recovery-time
 
@@ -368,9 +370,9 @@ to setup-jobs
    ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.5)  ( count non-health-essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
-        set shape "box"
+        set shape "square"
         set size 0.7
-        set color red
+        set color 5
         set type-job "essential"
         set worker one-of non-health-essential-workers-agentset in-radius link-radius
         ask worker [set job-id myself]
@@ -448,7 +450,7 @@ end
 to start-infection
   set infected? 1
   set color yellow
-  set size 1.
+  set size 1.2
   set viral-charge "low"
 end
 
@@ -465,19 +467,27 @@ to update-infection-status
 
       let serious random 100
 
- if viral-charge = "low"[
    ifelse time-since-infection > recovery-time [
       get-cured
     ][
+      if viral-charge = "low"[
+
        if serious < proba-complications [
       set serious-symptoms? 1
       set viral-charge "high"
       go-to-hospital
     ]
    ]
-  ]
-    if serious < proba-complications [
+      if viral-charge = "high"[
+          if serious < proba-complications [
       transfer-to-icu
+    ]
+
+  ]
+
+
+
+
     ]
   ]
 
@@ -491,20 +501,63 @@ to go-to-hospital
   let my-first-link item 0 my-sorted-links
   let nearest-hospital [other-end] of my-first-link
   set my-hospital nearest-hospital
-  move-to [patch-here] of my-hospital
+
+  ask my-hospital [
+         if available-beds >= 1 [
+    set available-beds available-beds - 1
+        ask myself [
+          set in-hospital? 1
+         move-to [patch-here] of my-hospital
+        set mobile? 0
+        ]
+
+    ]
+  ]
+
   ask my-links [die]
-  set mobile? 0
 end
 
 to transfer-to-icu
-  if is-turtle? my-hospital [
+  let p random 100
+  ifelse in-icu? = 0 [
+  ifelse in-hospital? = 1 [
     ask my-hospital [
-         if available-icu-beds > 0 [
+         ifelse available-icu-beds >= 1  [
     set available-beds available-beds + 1
     set available-icu-beds available-icu-beds - 1
-    ]
-      ask myself [set in-icu? 1]
+        ask myself [
+          set in-icu? 1
+          if p < proba-to-die-when-serious / mortality-reduction-in-icu [
+            set alive? 0
+            set size 0
+          ] ;;; we assume that the probability to die when taken care of in icu is x times less than normal
+        ]
+    ][
+
+          ask myself [
+          if p < proba-to-die-when-serious [
+            set alive? 0
+
+          ] ;;; we assume that the probability to die when taken care of in icu is x times less than normal
+        ]
+
+      ]
+
   ]
+    ] [
+
+          if p < proba-to-die-when-serious [
+            set alive? 0
+           go-to-hospital
+          ]
+
+      ]
+    ]
+  ][
+      if p < proba-to-die-when-serious / mortality-reduction-in-icu [
+            set alive? 0
+          ;
+          ] ;;; we assume that the probability to die when taken care of in icu is x times less than normal
   ]
 end
 
@@ -575,7 +628,7 @@ to get-cured
   set color blue
   set size 1
   set viral-charge "null"
-   if is-turtle? my-hospital [
+   if in-hospital? = 1 [
   ifelse in-icu? = 1[
 
     ask my-hospital
@@ -588,6 +641,8 @@ to get-cured
     set available-beds available-beds + 1
   ]
     ]
+
+    set in-hospital? 0
   ]
   set serious-symptoms? 0
   set time-since-infection 0
@@ -649,7 +704,7 @@ max-pop-city
 max-pop-city
 200
 10000
-1300.0
+1000.0
 100
 1
 NIL
@@ -664,7 +719,7 @@ n-cities
 n-cities
 0
 10
-5.0
+6.0
 1
 1
 NIL
@@ -1365,11 +1420,41 @@ MONITOR
 397
 577
 442
-NIL
-count jobs
+dead
+count people with [alive? = 0]
 17
 1
 11
+
+SLIDER
+178
+406
+371
+439
+proba-to-die-when-serious
+proba-to-die-when-serious
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+4
+439
+179
+472
+mortality-reduction-in-icu
+mortality-reduction-in-icu
+0
+10
+2.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
