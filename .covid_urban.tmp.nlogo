@@ -385,10 +385,7 @@ to go
   help-and-care
   ;go-to-hospital
   infect-people
-  update-infection-status
-  go-home
-   infect-people
-  update-infection-status
+
   update-behaviour
   ]
 
