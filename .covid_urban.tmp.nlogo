@@ -598,17 +598,17 @@ end
 
 to infect-people
   if infected? = 1 [
-    if viral-charge = "low" [set infection-rate infection-proba-without-symptoms]
-    if viral-charge = "high" [ set infection-rate infection-proba-with-symptoms]
+    if viral-charge = "low" [set infection-rate infection-proba-without-symptoms / 100]
+    if viral-charge = "high" [ set infection-rate infection-proba-with-symptoms / 100]
 
-  create-links-with other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection
-  ask link-neighbors [
+
+    ask  other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection [
   let rdn random 100
       if rdn < [infection-rate] of myself and use-protection? = 0[
    start-infection
       ]
-  ]
-    ask my-links [die]
+    ]
+
   ]
 end
 
@@ -716,16 +716,6 @@ GRAPHICS-WINDOW
 1
 ticks
 30.0
-
-TEXTBOX
-0
-0
-0
-0
-NIL
-11
-0.0
-1
 
 BUTTON
 2
@@ -1313,7 +1303,7 @@ infection-proba-without-symptoms
 infection-proba-without-symptoms
 0
 100
-1.0
+2.0
 1
 1
 NIL
@@ -1465,10 +1455,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-527
-315
-577
-360
+700
+557
+750
+602
 dead
 count people with [alive? = 0]
 17
@@ -1577,53 +1567,73 @@ protection-at-hospital
 -1000
 
 TEXTBOX
-305
-334
-455
-352
+472
+345
+622
+363
 infected person
 9
 44.0
-0
+1
 
 TEXTBOX
-304
-346
-454
-364
+471
+357
+621
+375
 susceptible person
 9
 67.0
 1
 
 TEXTBOX
-305
-358
-455
-376
+472
+369
+622
+387
 immune person
 9
 105.0
 1
 
 TEXTBOX
-305
-370
-455
-388
+472
+381
+622
+399
 dead person
 9
 0.0
 1
 
 TEXTBOX
-304
-381
-454
-399
+471
+392
+621
+410
 shop
 9
 125.0
+1
+
+TEXTBOX
+471
+403
+621
+421
+other workplace
+9
+4.0
+1
+
+TEXTBOX
+471
+416
+621
+434
+overloaded hospital
+9
+15.0
 1
 
 @#$#@#$#@

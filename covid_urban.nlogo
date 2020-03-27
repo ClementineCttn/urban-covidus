@@ -535,7 +535,7 @@ to go-to-hospital
     ]
   ]
    ask my-links [die]
-  infect-people
+  ;infect-people
 
 end
 
@@ -598,17 +598,17 @@ end
 
 to infect-people
   if infected? = 1 [
-    if viral-charge = "low" [set infection-rate infection-proba-without-symptoms]
-    if viral-charge = "high" [ set infection-rate infection-proba-with-symptoms]
+    if viral-charge = "low" [set infection-rate infection-proba-without-symptoms / 100]
+    if viral-charge = "high" [ set infection-rate infection-proba-with-symptoms / 100]
 
-  create-links-with other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection
-  ask link-neighbors [
+
+    ask  other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection [
   let rdn random 100
       if rdn < [infection-rate] of myself and use-protection? = 0[
    start-infection
       ]
-  ]
-    ask my-links [die]
+    ]
+
   ]
 end
 
@@ -1303,7 +1303,7 @@ infection-proba-without-symptoms
 infection-proba-without-symptoms
 0
 100
-1.0
+2.0
 1
 1
 NIL
