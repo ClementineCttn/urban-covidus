@@ -92,7 +92,9 @@ to setup
 
   if protection-at-hospital[
     ask people with [health-worker? = 1] [
-set use-protection? 1]
+      set use-protection? 1
+      set shape "health-worker-mask"
+    ]
   ]
 
   update-globals
@@ -714,6 +716,16 @@ GRAPHICS-WINDOW
 1
 ticks
 30.0
+
+TEXTBOX
+0
+0
+0
+0
+NIL
+11
+0.0
+1
 
 BUTTON
 2
@@ -1563,6 +1575,56 @@ protection-at-hospital
 0
 1
 -1000
+
+TEXTBOX
+305
+334
+455
+352
+infected person
+9
+44.0
+0
+
+TEXTBOX
+304
+346
+454
+364
+susceptible person
+9
+67.0
+1
+
+TEXTBOX
+305
+358
+455
+376
+immune person
+9
+105.0
+1
+
+TEXTBOX
+305
+370
+455
+388
+dead person
+9
+0.0
+1
+
+TEXTBOX
+304
+381
+454
+399
+shop
+9
+125.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?

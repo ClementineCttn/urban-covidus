@@ -90,8 +90,11 @@ to setup
     set pcolor scale-color orange count people-here max [count people-here] of patches 0
   ]
 
-  if good-protection-at-hospital = "on" [
-    ask people with [health-worker? = 1] [set use-protection? 1]
+  if protection-at-hospital[
+    ask people with [health-worker? = 1] [
+      set use-protection? 1
+      set shape "health-worker-mask"
+    ]
   ]
 
   update-globals
@@ -471,6 +474,8 @@ to update-infection-status
   if infected? = 1 [
   let time-since-infection ticks - time-at-infection
 
+    if time-since-infection > incubation-time-no-symptom[
+      set mobile? 0
     let agefactor 0
      if age = "over-75" [set agefactor 2]
       if age = "60-74" [set agefactor 1]
@@ -503,7 +508,7 @@ to update-infection-status
 
     ]
   ]
-
+  ]
 
 end
 
@@ -522,10 +527,11 @@ to go-to-hospital
           set in-hospital? 1
          move-to [patch-here] of my-hospital
         set mobile? 0
-        set use-protection? 1
+        if protection-at-hospital[
+          set use-protection? 1
              ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
         ]
-
+      ]
     ]
   ]
    ask my-links [die]
@@ -729,10 +735,10 @@ NIL
 1
 
 SLIDER
-304
-379
-448
-412
+9
+398
+153
+431
 max-pop-city
 max-pop-city
 200
@@ -744,15 +750,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-304
-344
-404
-377
+9
+363
+109
+396
 n-cities
 n-cities
 0
 10
-5.0
+6.0
 1
 1
 NIL
@@ -909,15 +915,15 @@ couple
 HORIZONTAL
 
 SLIDER
-8
-282
-185
-315
+11
+209
+188
+242
 initial-proba-caring-away
 initial-proba-caring-away
 0
 100
-10.0
+8.0
 1
 1
 NIL
@@ -1074,20 +1080,20 @@ FROM STATISTICS
 0
 
 TEXTBOX
-8
-266
-158
-284
+11
+193
+161
+211
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-305
-327
-455
-345
+10
+346
+160
+364
 Urban context
 11
 0.0
@@ -1128,7 +1134,7 @@ NIL
 1
 
 PLOT
-279
+286
 165
 577
 315
@@ -1243,10 +1249,10 @@ round (n-available-icu-beds)
 11
 
 SLIDER
-406
-344
-518
-377
+111
+363
+223
+396
 link-radius
 link-radius
 0
@@ -1258,17 +1264,17 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-6
-246
-156
-264
+9
+173
+159
+191
 FREE PARAMETERS
 14
 16.0
 1
 
 PLOT
-278
+285
 15
 578
 165
@@ -1289,25 +1295,25 @@ PENS
 "susceptible" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-9
-439
-236
-472
+10
+452
+237
+485
 infection-proba-without-symptoms
 infection-proba-without-symptoms
 0
 100
-2.0
+1.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-237
-439
-446
-472
+238
+452
+447
+485
 infection-proba-with-symptoms
 infection-proba-with-symptoms
 0
@@ -1319,10 +1325,10 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-10
-423
-160
-441
+11
+436
+161
+454
 Epidemiological variables
 11
 0.0
@@ -1340,10 +1346,10 @@ total-population
 11
 
 SLIDER
-447
-439
-576
-472
+448
+452
+577
+485
 radius-infection
 radius-infection
 0
@@ -1355,15 +1361,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-472
-205
-505
+10
+485
+206
+518
 incubation-time-no-symptom
 incubation-time-no-symptom
 0
 20
-6.0
+4.0
 1
 1
 NIL
@@ -1387,30 +1393,30 @@ NIL
 1
 
 SLIDER
-205
-472
-373
-505
+206
+485
+374
+518
 average-recovery-time
 average-recovery-time
 0
 30
-14.0
+9.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-373
-472
-506
-505
+374
+485
+507
+518
 sd-recovery-time
 sd-recovery-time
 0
 10
-2.0
+1.0
 1
 1
 NIL
@@ -1434,10 +1440,10 @@ NIL
 1
 
 SLIDER
-9
-506
-181
-539
+10
+519
+182
+552
 proba-serious-symptoms
 proba-serious-symptoms
 0
@@ -1449,10 +1455,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-527
-315
-577
-360
+700
+557
+750
+602
 dead
 count people with [alive? = 0]
 17
@@ -1460,40 +1466,40 @@ count people with [alive? = 0]
 11
 
 SLIDER
-182
-506
-375
-539
+183
+519
+376
+552
 proba-to-die-when-serious
 proba-to-die-when-serious
 0
 100
-35.0
+20.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-376
-506
-551
-539
+377
+519
+552
+552
 mortality-reduction-in-icu
 mortality-reduction-in-icu
 0
 10
-2.0
+3.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-8
-348
-228
-381
+11
+275
+231
+308
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -1505,10 +1511,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
-315
-197
-348
+11
+242
+200
+275
 average-days-between-care
 average-days-between-care
 0
@@ -1520,10 +1526,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
-380
-152
-413
+11
+307
+155
+340
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -1535,15 +1541,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-152
-380
-278
-413
+155
+307
+281
+340
 radius-movement
 radius-movement
 0
 20
-5.0
+4.0
 1
 1
 NIL
@@ -1552,13 +1558,83 @@ HORIZONTAL
 SWITCH
 11
 76
-261
+186
 109
-good-protection-at-hospital
-good-protection-at-hospital
+protection-at-hospital
+protection-at-hospital
 0
 1
 -1000
+
+TEXTBOX
+472
+345
+622
+363
+infected person
+9
+44.0
+1
+
+TEXTBOX
+471
+357
+621
+375
+susceptible person
+9
+67.0
+1
+
+TEXTBOX
+472
+369
+622
+387
+immune person
+9
+105.0
+1
+
+TEXTBOX
+472
+381
+622
+399
+dead person
+9
+0.0
+1
+
+TEXTBOX
+471
+392
+621
+410
+shop
+9
+125.0
+1
+
+TEXTBOX
+471
+403
+621
+421
+other workplace
+9
+4.0
+1
+
+TEXTBOX
+471
+416
+621
+434
+overloaded hospital
+9
+15.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
