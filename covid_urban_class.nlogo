@@ -2,38 +2,18 @@ globals[
   n-infected
   n-recovered
   n-deaths
-  n-available-beds
-  n-available-icu-beds
-
   total-population
-  total-hospitals
-  total-beds
-  total-icu-beds
-
-   non-health-essential-jobs
  non-essential-jobs
-
 ]
 
 breed [cities city]
 breed [people person]
-breed [hospitals hospital]
 breed [jobs job]
 
 cities-own[
   population
   ;;jobs
   id
-  health-workers
-  hospital?
-]
-
-hospitals-own[
-  health-workers
-  beds
-  icu-beds
-  available-beds
-  available-icu-beds
 ]
 
 jobs-own[
@@ -49,40 +29,28 @@ patches-own[
 ]
 people-own[
   alive? ;; 0/1
-  infected? ;; 0/1
-  serious-symptoms? ;; 0/1
+  age
+  infected? ;; 0/10/1
   mobile? ;; 0/1
   immune? ;; 0/1
   time-at-infection
   recovery-time ;; 0-...
-  viral-charge ;; high / medium / low
-  use-protection? ;; 0/1
-  age ;; under-20 / 20-59 / 60-74 / over-75
   active ;; 1 = at work / 0 = inactive or looking for work
   work-status ;; essential / non-essential
-  health-worker? ;; 0/1
-  household-status ;; alone / couple / with-children
-  caring-away-status ;; care / no-care
   residence-city ;;
   residence-xy
   home-type ;; collective/individual
 ;;  access-to-light ;; single-window / multiple-windows / balcony / garden
 ;;  tenure-type ;; owned / rented / socially-rented / none
   secondary-home ;; 0/1
-  comorbidity ;; 0/1
-  repatriated ;; 0/1
-  my-hospital
-  in-hospital?
-  in-icu?
-  infection-rate
   job-id
 ]
 
 to setup
   ca
+
   setup-cities
   setup-people
-  setup-hospitals
   setup-city-links
   setup-jobs
 
@@ -90,23 +58,17 @@ to setup
     set pcolor scale-color orange count people-here max [count people-here] of patches 0
   ]
 
-  if protection-at-hospital[
-    ask people with [health-worker? = 1] [
-      set use-protection? 1
-      set shape "health-worker-mask"
-    ]
-  ]
+
 
   update-globals
+  assign-color
   reset-ticks
-   infect-one-person
 
 end
 
 to setup-city-links
    ask cities [
     create-links-with other cities in-radius link-radius
-    create-link-with one-of other cities with [hospital? = 1]
   ]
 end
 
@@ -125,7 +87,6 @@ to setup-cities
     ;set color pink
     set size 0
     let p population / 100
-     set hospital? 0
     ask patch-here [
       set pcolor 120 + i
       set city-id i
@@ -157,66 +118,6 @@ to setup-cities
  ; ]
 end
 
-to setup-hospitals
-
-
-  ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
-
-   ;;;  Hospitals not realistic...
-
-   ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
-
-
-
-;;  ;; Source : DREES, Panorama des établissements de santé, édition 2017
-;;  ;; in France: 3 089 hospitals and 408 245 beds, so 132 beds per hospital
-;;
-   set total-beds round ( total-population * hospital-bed-per-100hab / 100 )
-  set total-icu-beds round ( total-population * icu-bed-per-100hab / 100 )
-
-
-  ask cities with [population > max-pop-city / 3][
-    set hospital? 1
-
-    let share-population population / sum [population] of cities with [population > max-pop-city / 3]
-
-    ask patch-here [
-      sprout-hospitals 1 [
-    set shape "house"
-      set size 2
-        set color blue
-        set beds share-population * total-beds
-        set icu-beds share-population * total-icu-beds
-        let health-workers-agentset people with [health-worker? = 1 and residence-city = [city-id] of myself]
-        set health-workers count health-workers-agentset
-
-        ask health-workers-agentset [
-          set job-id myself
-        ]
-
-        set available-beds beds
-        set available-icu-beds icu-beds
-    ]
-  ]
-  ]
-   set total-hospitals count hospitals
-  set n-available-beds sum [available-beds] of hospitals
-  set n-available-icu-beds sum [available-icu-beds] of hospitals
-
-  ask people with [health-worker? = 1 and job-id = 0][
-    set job-id one-of hospitals
-    ]
-
-  ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
-
-
-   ;;;  ;;;  ;;;  ;;;  ;;;  ;;;
-
-
-
-
-end
-
 
 to setup-people
   ask patches with [pcolor != 0] [
@@ -233,20 +134,18 @@ to setup-people
       set alive? 1
       set infected? 0
       set mobile? 1
-      set serious-symptoms? 0
       set immune? 0
       set time-at-infection 0
-      set viral-charge "null"
       set residence-city idc
-      set in-icu? 0
-      set use-protection? 0
-      set infection-rate 0
       set job-id 0
-        set in-hospital? 0
 
-      set recovery-time random-normal average-recovery-time sd-recovery-time
+      set recovery-time random-normal average-recovery-time 1
 
-      ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
+   ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
+       let under20 24
+      let from20to59 50
+      let from60to74 17
+
       let a random-float 100
       ifelse (a < under20) [ set age "under-20"][
         ifelse (a < (under20 + from20to59)) [ set age "20-59"][
@@ -257,6 +156,11 @@ to setup-people
 
       ;; distribution of active workers by age from French population in 2016, Figure 2 https://www.insee.fr/fr/statistiques/3303384?sommaire=3353488
       ;; nb. age categories are not exactly coincidental (÷- 5 years)
+
+      let under24-activity 37
+      let from25to49-activity 88
+      let from50to64-activity 65
+
       let b random-float 100
       if [age] of self = "under-20" [
         ifelse (b < under24-activity) [set active 1][set active 0]
@@ -270,57 +174,25 @@ to setup-people
       if [age] of self = "over-75" [set active 0]
 
 
-
       ;; distribution of active workers by professions in France in 2016 https://www.insee.fr/fr/statistiques/3303413?sommaire=3353488
       ;; large estimate of essential workers = 46.6%
       ;; 7.1% (human health) + 7.4% social + 12.9% commerce + 9.1% public admin + 4.6% finance + 5.5% Transport
-      ;;share of human health in essential = 15.2%
 
      let c random-float 100
-      let z random-float 100
 
        if [active] of self = 1 [
         ifelse (c < essential-industry) [
           set work-status "essential"
-            ifelse (z < 15.2) [
-          set health-worker? 1
-        ][
-          set health-worker? 0
-        ]
         ][
           set work-status "non-essential"
         ]
       ]
-
-
-      ;; distribution of households by compostion in France in 2015  https://www.insee.fr/fr/statistiques/3676599?sommaire=3696937
-      ; single = 35.3% (48.8% among > 80 years old)
-      ; couple no kids = 25.5
-      ; couple with kids = 25.5
-      ; adult with kids = 8.9
-      let d random-float 100
-       ifelse [age] of self = "over-75" [
-        ifelse (d < elders-alone) [set household-status "alone"][set household-status "couple"]
-      ] [
-         ifelse (d < alone) [set household-status "alone"][
-          ifelse (d < alone + couple) [set household-status "couple"] [set household-status "with-children"]
-        ]
-      ]
-
-
-
-      ;; hard to estimate. proba of caring at 10 initially but will rise with the number of infected.
-       let f random-float 100
-       ifelse (f < initial-proba-caring-away) [set caring-away-status "care"][set household-status "no-care"]
-
-
 
       ;;source: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwizuoyypbHoAhWNgVwKHdERDqIQFjAAegQIBBAB&url=https%3A%2F%2Fwww.insee.fr%2Ffr%2Fstatistiques%2Ffichier%2F2586038%2FLOGFRA17j1_F5.1.pdf&usg=AOvVaw1FYYaTUWdRFyhe9mqPV_zI
       ;; 15% of households have another residence
 
          let g random-float 100
        ifelse (g < proba-secondary-home) [set secondary-home 1][set secondary-home 0]
-
 
 
          ;;source : https://www.insee.fr/fr/statistiques/3620894
@@ -330,25 +202,12 @@ to setup-people
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
 
 
-      ;; hypertension : 10millions = 14% FRance https://www.fedecardio.org/Je-m-informe/Reduire-le-risque-cardio-vasculaire/lhypertension-arterielle
-      ;; diabetes : 3.3 millions = 5% FRance https://www.santepubliquefrance.fr/maladies-et-traumatismes/diabete/articles/prevalence-et-incidence-du-diabete
-      ;; cancer : entre 2.5 (femmes) et 4 (hommes) cas pour 1000 personnes dans le monde en 2005 https://www.ligue-cancer.net/article/26089_les-chiffres-cles-des-cancers
-
-      ;; if we sum 14 + 5 + 3 = potentially around 22% of people with comorbidity
-           let j random-float 100
-       ifelse (j < proba-comorbidity) [ set comorbidity 1][set comorbidity 0]
-
-
-
-      ;; source: https://www.francetvinfo.fr/sante/maladie/coronavirus/coronavirus-des-francais-bloques-a-letranger_3877017.html
-      ;; 130 000 français attendant leur rappatriation = 0.2%
-           let k random-float 100
-       ifelse (k < repatriated-share) [set repatriated 1][ set repatriated 0]
-
     ]
   ]
 
-   assign-color
+  ask one-of people [set infected? 1]
+   update-globals
+    assign-color
 end
 
 to assign-color
@@ -356,53 +215,69 @@ to assign-color
   ask people with [infected? = 1][ set color yellow set size 1.5]
   ask people with [immune? = 1][ set color blue ]
   ask people with [alive? = 0][ set color black set size 1 set shape "x"]
-  ask people with [health-worker? = 1][set size 1.5 set shape "health-worker"]
-  ask hospitals with [available-beds  = 0] [ set color red set size 3]
-  ask hospitals with [available-beds > 0] [ set color blue set size 2]
 end
 
 
 
 to setup-jobs
   let n-workers count people with [active = 1]
-  let n-health-workers count people with [health-worker? = 1]
   let n-essential-workers count people with [work-status = "essential"]
-  set non-health-essential-jobs  n-essential-workers - n-health-workers
   set non-essential-jobs  n-workers - n-essential-workers
-  let non-health-jobs  non-health-essential-jobs + non-essential-jobs
 
-;  let non-essential-workers-agentset people with [work-status = "non-essential"]
-  let non-health-essential-workers-agentset people with [work-status = "essential" and health-worker? = 0]
+  let essential-workers-agentset people with [work-status = "essential"]
 
-     while [any? non-health-essential-workers-agentset]  [
+     while [any? essential-workers-agentset]  [
    ask patches with [pcolor != 0] [
    ;     let idc [city-id] of self
-      let dens min list ([density] of self * 1.5)  ( count non-health-essential-workers-agentset in-radius link-radius)
+      let dens min list ([density] of self * 1.5)  ( count essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "square"
         set size 0.7
         set color 5
         set is-shop? 0
         set type-job "essential"
-        set worker one-of non-health-essential-workers-agentset in-radius link-radius
+        set worker one-of essential-workers-agentset in-radius link-radius
         ask worker [set job-id myself]
        ; set worker-id [who] of worker
-        ask non-health-essential-workers-agentset [
+        ask essential-workers-agentset [
           let worker-to-remove [worker] of myself
-          set non-health-essential-workers-agentset non-health-essential-workers-agentset with [self != worker-to-remove]
+          set essential-workers-agentset essential-workers-agentset with [self != worker-to-remove]
         ]
   ]
   ]
 
   ]
 
-  let n-shops min (list (shop-per-100-inhab * total-population / 100)  (non-health-essential-jobs))
+  let n-shops min (list (shop-per-100-inhab * total-population / 100)  (n-essential-workers))
   while [ n-shops >= 1 ] [
     ask one-of jobs with [is-shop? = 0] [
       set is-shop? 1
       set color 125
       set n-shops n-shops - 1
     ]
+  ]
+
+   let non-essential-workers-agentset people with [work-status = "non-essential"]
+  while [any? non-essential-workers-agentset]  [
+   ask patches with [pcolor != 0] [
+   ;     let idc [city-id] of self
+      let dens min list ([density] of self * 1.5)  ( count non-essential-workers-agentset in-radius link-radius)
+    sprout-jobs dens [
+        set shape "square"
+        set size 0.7
+        set color 2
+        set is-shop? 0
+        set type-job "non-essential"
+        set worker one-of non-essential-workers-agentset in-radius link-radius
+        ask worker [set job-id myself]
+       ; set worker-id [who] of worker
+        ask non-essential-workers-agentset [
+          let worker-to-remove [worker] of myself
+          set non-essential-workers-agentset non-essential-workers-agentset with [self != worker-to-remove]
+        ]
+  ]
+  ]
+
   ]
 
 end
@@ -416,34 +291,14 @@ to go
   if all? people [alive? = 0]
     [ stop ]
 
-  ask people [
+
   go-to-work
   go-shopping
-  help-and-care
-  update-infection-status
-  ]
-
-  let max-density  max [count people-here] of patches
-  ask patches with [pcolor != 0] [
-    set pcolor scale-color orange sqrt count people-here sqrt max-density 0
-  ]
-
-   ask people [
   go-home
-  update-infection-status
-  update-behaviour
-  ]
 
-  ask hospitals [
-   treat-sick-people
-  ]
+  update-globals
+    assign-color
 
-   ask patches with [pcolor != 0] [
-    set pcolor scale-color orange sqrt count people-here sqrt max-density  0
-  ]
-
-   update-globals
-   assign-color
   tick
 
 end
@@ -452,248 +307,42 @@ to update-globals
  set n-infected count people with [infected? = 1]
  set n-recovered count people with [immune? = 1]
  set n-deaths count people with [alive? = 0]
- set n-available-beds sum [available-beds] of hospitals
- set n-available-icu-beds sum [available-icu-beds] of hospitals
 end
 
-to infect-one-person
-  ask one-of people with [infected? = 0 and alive? = 1 and immune? = 0][
-    start-infection
-  ]
-end
-
-to start-infection
-  set infected? 1
-  set color yellow
-  set size 1.2
-  set viral-charge "low"
-  set time-at-infection ticks
-end
-
-to update-infection-status
-  if infected? = 1 [
-  let time-since-infection ticks - time-at-infection
-
-    if time-since-infection > incubation-time-no-symptom[
-      set mobile? 0
-    let agefactor 0
-     if age = "over-75" [set agefactor 2]
-      if age = "60-74" [set agefactor 1]
-      if age = "20-59" [set agefactor 0.5]
-
-      let proba-complications proba-serious-symptoms * ((1 + comorbidity + agefactor) / 3)
-
-      let serious random 100
-
-   ifelse time-since-infection > recovery-time [
-      get-cured
-    ][
-      if viral-charge = "low"[
-
-       if serious < proba-complications [
-      set serious-symptoms? 1
-      set viral-charge "high"
-      go-to-hospital
-    ]
-   ]
-      if viral-charge = "high"[
-          if serious < proba-complications [
-      transfer-to-icu
-    ]
-
-  ]
-
-
-
-
-    ]
-  ]
-  ]
-
-end
-
-
-to go-to-hospital
-  create-links-with hospitals
-  let my-sorted-links sort-on [link-length] my-links
-  let my-first-link item 0 my-sorted-links
-  let nearest-hospital [other-end] of my-first-link
-  set my-hospital nearest-hospital
-
-  ask my-hospital [
-         if available-beds >= 1 [
-    set available-beds available-beds - 1
-        ask myself [
-          set in-hospital? 1
-         move-to [patch-here] of my-hospital
-        set mobile? 0
-        if protection-at-hospital[
-          set use-protection? 1
-             ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
-        ]
-      ]
-    ]
-  ]
-   ask my-links [die]
-  infect-people
-
-end
-
-to transfer-to-icu
-  let p random 100
-  ifelse in-icu? = 0 [
-  ifelse in-hospital? = 1 [
-    ask my-hospital [
-         ifelse available-icu-beds >= 1  [
-    set available-beds available-beds + 1
-    set available-icu-beds available-icu-beds - 1
-        ask myself [
-          set in-icu? 1
-          if p < proba-to-die-when-serious / mortality-reduction-in-icu [
-            set alive? 0
-            set size 0
-          ] ;;; we assume that the probability to die when taken care of in icu is x times less than normal
-        ]
-    ][
-
-          ask myself [
-          if p < proba-to-die-when-serious [
-            set alive? 0
-
-          ] ;;; we assume that the probability to die when taken care of in icu is x times less than normal
-        ]
-
-      ]
-
-  ]
-    ] [
-
-          if p < proba-to-die-when-serious [
-            set alive? 0
-           go-to-hospital
-      ]
-
-      ]
-
-  ][
-      if p < proba-to-die-when-serious / mortality-reduction-in-icu [
-            set alive? 0
-          ;
-          ] ;;; we assume that the probability to die when taken care of in icu is x times less than normal
-  ]
-end
-
-to deliver-50-protection
-
-    let candidates people with [ alive? = 1 and use-protection? = 0 ]
-  repeat 50 [if any? candidates [
-    ask one-of candidates [
-        set use-protection? 1
-        ifelse health-worker? = 1 [set shape "health-worker-mask"][set shape "person-mask"]
-      ]
-    ]
-  ]
-end
-
-
-to infect-people
-  if infected? = 1 [
-    if viral-charge = "low" [set infection-rate infection-proba-without-symptoms / 100]
-    if viral-charge = "high" [ set infection-rate infection-proba-with-symptoms / 100]
-
-
-    ask  other people with [mobile? = 1 and alive? = 1 and immune? = 0] in-radius radius-infection [
-  let rdn random 100
-      if rdn < [infection-rate] of myself and use-protection? = 0[
-   start-infection
-      ]
-    ]
-
-  ]
-end
 
 to go-to-work
+  ask people[
  if job-id != 0[
     move-to [patch-here] of job-id
-    infect-people
   ]
-
+  ]
 end
 
 to go-shopping
+   ask people[
  if mobile? = 1[
 
-    if random average-days-between-shopping = 1[
+    if random average-days-between-shopping = 1 [
 
     let my-shop one-of jobs with [is-shop? = 1] in-radius radius-movement
     if is-turtle? my-shop[
     move-to [patch-here] of my-shop
-    infect-people
     ]
   ]
   ]
-end
-
-to help-and-care
-  if caring-away-status = "care" [
-    if random average-days-between-care = 1[
-    move-to one-of people in-radius radius-movement
-    infect-people
   ]
-  ]
-end
-
-
-to update-behaviour
-
-end
-
-to treat-sick-people
-
- ; ask people  [get-cured]
 end
 
 to  go-home
   ask people [
     setxy item 0 residence-xy item 1 residence-xy
-    infect-people
   ]
-end
-
-
-to get-cured
-  set infected? 0
-  set immune? 1
-  set color blue
-  set size 1
-  set viral-charge "null"
-   if in-hospital? = 1 [
-  ifelse in-icu? = 1[
-
-    ask my-hospital
-  [
-    set available-icu-beds available-icu-beds + 1
-  ]
-  ][
-      ask my-hospital
-  [
-    set available-beds available-beds + 1
-  ]
-    ]
-
-    set in-hospital? 0
-  ]
-  set serious-symptoms? 0
-  set time-at-infection 0
-  setxy item 0 residence-xy item 1 residence-xy
-
-    set my-hospital "null"
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-586
+520
 10
-1127
+1061
 552
 -1
 -1
@@ -735,10 +384,10 @@ NIL
 1
 
 SLIDER
-9
-398
-153
-431
+228
+245
+372
+278
 max-pop-city
 max-pop-city
 200
@@ -750,10 +399,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-363
-109
-396
+13
+245
+113
+278
 n-cities
 n-cities
 0
@@ -765,100 +414,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1142
-44
-1244
-77
-under20
-under20
-0
-100
-24.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-1245
-44
-1368
-77
-from20to59
-from20to59
-0
-100
-50.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-1142
-78
-1314
-111
-from60to74
-from60to74
-0
-100
-17.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-1141
-130
-1279
-163
-under24-activity
-under24-activity
-0
-100
-37.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-1278
-130
-1424
-163
-from25to49-activity
-from25to49-activity
-0
-100
-88.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1141
-164
-1320
-197
-from50to64-activity
-from50to64-activity
-0
-100
-65.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1139
-214
-1321
-247
+13
+101
+195
+134
 essential-industry
 essential-industry
 0
@@ -870,70 +429,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1140
-264
-1249
-297
-elders-alone
-elders-alone
-0
-100
-49.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1249
-263
-1341
-296
-alone
-alone
-0
-100
-35.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1139
-297
-1231
-330
-couple
-couple
-0
-100
-26.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-11
-209
-188
-242
-initial-proba-caring-away
-initial-proba-caring-away
-0
-100
-8.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1138
-401
-1341
-434
+13
+153
+216
+186
 proba-secondary-home
 proba-secondary-home
 0
@@ -945,40 +444,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1143
-603
-1315
-636
-repatriated-share
-repatriated-share
-0
-100
-0.2
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1141
-468
-1313
-501
-proba-comorbidity
-proba-comorbidity
-0
-100
-34.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1140
-349
-1350
-382
+249
+103
+459
+136
 share-collective-housing
 share-collective-housing
 0
@@ -990,110 +459,60 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1142
-29
-1292
-47
-age structure
-11
-0.0
-1
-
-TEXTBOX
-1144
-115
-1438
-143
-activity rate (active vs. inactive/unemployed)
-11
-0.0
-1
-
-TEXTBOX
-1141
-199
-1416
-226
+15
+86
+290
+113
 share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-1140
-248
-1290
-266
-household composition 
-11
-0.0
-1
-
-TEXTBOX
-1140
-384
-1397
-412
+15
+136
+272
+164
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-1143
-587
-1434
-615
-people potentially repatriated from abroad\n
-11
-0.0
-1
-
-TEXTBOX
-1141
-332
-1431
-360
+250
+86
+540
+114
 share of hosueholds living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-1140
-435
-1359
-477
-probability of having comorbidities (heart disease, cancer, diabetes)
-11
-0.0
-1
-
-TEXTBOX
-1142
-10
-1292
-29
+14
+66
+164
+85
 FROM STATISTICS
 15
 16.0
 0
 
 TEXTBOX
-11
-193
-161
-211
+13
+341
+163
+359
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-10
-346
-160
-364
+14
+228
+164
+246
 Urban context
 11
 0.0
@@ -1133,126 +552,11 @@ NIL
 NIL
 1
 
-PLOT
-286
-165
-577
-315
-health-workers
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-true
-"" ""
-PENS
-"susceptible" 1.0 0 -10899396 true "plot count people with [health-worker? = 1 and infected? = 0 and immune? = 0]" "plot count people with [health-worker? = 1 and infected? = 0 and immune? = 0]"
-"infected" 1.0 0 -817084 true "plot count people with [health-worker? = 1 and infected? = 1]" "plot count people with [health-worker? = 1 and infected? = 1]"
-"immune" 1.0 0 -8275240 true "plot count people with [health-worker? = 1 and  immune? = 1]" "plot count people with [health-worker? = 1 and immune? = 1]"
-
-MONITOR
-498
-270
-575
-315
-healthcaretotal
-count people with [health-worker? = 1]
-17
-1
-11
-
 SLIDER
-1143
-517
-1331
-550
-hospital-bed-per-100hab
-hospital-bed-per-100hab
-0
-20
-0.6
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-1144
-553
-1328
-586
-icu-bed-per-100hab
-icu-bed-per-100hab
-0
-20
-0.3
-0.1
-1
-NIL
-HORIZONTAL
-
-TEXTBOX
-1143
-502
-1293
-520
-hospital statistics
-11
-0.0
-1
-
-MONITOR
-764
-558
-842
-603
-NIL
-total-beds
-17
-1
-11
-
-MONITOR
-842
-558
-945
-603
-NIL
-total-icu-beds
-17
-1
-11
-
-MONITOR
-946
-558
-1024
-603
-avail. beds
-round (n-available-beds)
-17
-1
-11
-
-MONITOR
-1025
-558
-1127
-603
-avail. icu beds
-round (n-available-icu-beds)
-17
-1
-11
-
-SLIDER
-111
-363
-223
-396
+115
+245
+227
+278
 link-radius
 link-radius
 0
@@ -1264,20 +568,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-9
-173
-159
-191
+13
+205
+162
+223
 FREE PARAMETERS
 14
 16.0
 1
 
 PLOT
-285
-15
-578
-165
+1066
+10
+1359
+160
 situation
 NIL
 NIL
@@ -1295,12 +599,12 @@ PENS
 "susceptible" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-10
-452
-237
-485
-infection-proba-without-symptoms
-infection-proba-without-symptoms
+12
+300
+126
+333
+infection-proba
+infection-proba
 0
 100
 2.0
@@ -1309,47 +613,21 @@ infection-proba-without-symptoms
 NIL
 HORIZONTAL
 
-SLIDER
-238
-452
-447
-485
-infection-proba-with-symptoms
-infection-proba-with-symptoms
-0
-100
-9.0
-1
-1
-NIL
-HORIZONTAL
-
 TEXTBOX
-11
-436
-161
-454
+13
+284
+163
+302
 Epidemiological variables
 11
 0.0
 1
 
-MONITOR
-496
-96
-573
-141
-NIL
-total-population
-17
-1
-11
-
 SLIDER
-448
-452
-577
-485
+296
+299
+425
+332
 radius-infection
 radius-infection
 0
@@ -1361,42 +639,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-485
-206
-518
-incubation-time-no-symptom
-incubation-time-no-symptom
-0
-20
-4.0
-1
-1
-NIL
-HORIZONTAL
-
-BUTTON
-11
-110
-126
-143
-NIL
-infect-one-person
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-SLIDER
-206
-485
-374
-518
+127
+299
+295
+332
 average-recovery-time
 average-recovery-time
 0
@@ -1408,73 +654,30 @@ NIL
 HORIZONTAL
 
 SLIDER
-374
-485
-507
-518
-sd-recovery-time
-sd-recovery-time
+12
+358
+232
+391
+average-days-between-shopping
+average-days-between-shopping
 0
 10
-1.0
-1
-1
-NIL
-HORIZONTAL
-
-BUTTON
-127
-110
-242
-143
-Protection for 50
-deliver-50-protection
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-SLIDER
-10
-519
-182
-552
-proba-serious-symptoms
-proba-serious-symptoms
-0
-100
 4.0
 1
 1
 NIL
 HORIZONTAL
 
-MONITOR
-700
-557
-750
-602
-dead
-count people with [alive? = 0]
-17
-1
-11
-
 SLIDER
-183
-519
-376
-552
-proba-to-die-when-serious
-proba-to-die-when-serious
+233
+358
+377
+391
+shop-per-100-inhab
+shop-per-100-inhab
 0
-100
-20.0
+20
+2.0
 1
 1
 NIL
@@ -1482,69 +685,9 @@ HORIZONTAL
 
 SLIDER
 377
-519
-552
-552
-mortality-reduction-in-icu
-mortality-reduction-in-icu
-0
-10
-3.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-11
-275
-231
-308
-average-days-between-shopping
-average-days-between-shopping
-0
-10
-4.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-11
-242
-200
-275
-average-days-between-care
-average-days-between-care
-0
-10
-2.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-11
-307
-155
-340
-shop-per-100-inhab
-shop-per-100-inhab
-0
-20
-2.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-155
-307
-281
-340
+358
+503
+391
 radius-movement
 radius-movement
 0
@@ -1554,86 +697,55 @@ radius-movement
 1
 NIL
 HORIZONTAL
-
-SWITCH
-11
-76
-186
-109
-protection-at-hospital
-protection-at-hospital
-0
-1
--1000
 
 TEXTBOX
-472
-345
-622
-363
+430
+10
+580
+28
 infected person
 9
 44.0
 1
 
 TEXTBOX
-471
-357
-621
-375
+429
+22
+579
+40
 susceptible person
 9
 67.0
 1
 
 TEXTBOX
-472
-369
-622
-387
+430
+34
+580
+52
 immune person
 9
 105.0
 1
 
 TEXTBOX
-472
-381
-622
-399
-dead person
-9
-0.0
-1
-
-TEXTBOX
-471
-392
-621
-410
+430
+45
+580
+63
 shop
 9
 125.0
 1
 
 TEXTBOX
-471
-403
-621
-421
+430
+56
+580
+74
 other workplace
 9
 4.0
-1
-
-TEXTBOX
-471
-416
-621
-434
-overloaded hospital
-9
-15.0
 1
 
 @#$#@#$#@
