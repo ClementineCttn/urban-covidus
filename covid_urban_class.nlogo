@@ -16,6 +16,11 @@ cities-own[
   id
 ]
 
+links-own[
+ potential-infrastructure
+  best
+]
+
 jobs-own[
   type-job
   worker ;-id
@@ -53,6 +58,7 @@ to setup
   setup-people
   setup-city-links
   setup-jobs
+  setup-secondary-homes
 
   ask patches with [pcolor != 0] [
     set pcolor scale-color orange count people-here max [count people-here] of patches 0
@@ -68,10 +74,28 @@ end
 
 to setup-city-links
    ask cities [
-    create-links-with other cities in-radius link-radius
+    create-links-with other cities
+    ask links [
+      let t1 end1
+      let t2 end2
+      set best 0
+      let d12 [distance t2] of t1
+      set  potential-infrastructure ([population] of end1 * [population] of end2) / ( d12 ^ 2 )
+      if potential-infrastructure = max [[potential-infrastructure] of my-out-links] of t1 [set best 1]
+    ]
+
+    ask my-out-links with [potential-infrastructure < median [potential-infrastructure] of links / 1.5 and best != 1]
+    [
+      die
+    ]
+    if count link-neighbors < 1 [
+      create-link-with min-one-of other cities [distance myself]
+    ]
   ]
 end
 
+to setup-secondary-homes
+end
 
 to setup-cities
   ask patches [set pcolor 0]
@@ -293,8 +317,16 @@ to go
 
 
   go-to-work
+
+   ask patches with [pcolor != 0] [
+    set pcolor scale-color orange count people-here max [count people-here] of patches 0
+  ]
+
   go-shopping
+
+
   go-home
+
 
   update-globals
     assign-color
@@ -407,7 +439,7 @@ n-cities
 n-cities
 0
 10
-6.0
+5.0
 1
 1
 NIL
