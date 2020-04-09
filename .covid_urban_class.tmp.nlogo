@@ -30,6 +30,7 @@ jobs-own[
 patches-own[
   city-id
   density
+  people-counter
  ; worker-id
 ]
 people-own[
@@ -54,6 +55,7 @@ people-own[
 to setup
   ca
 
+  ask patches [set people-counter 0]
   setup-cities
   setup-people
   setup-city-links
@@ -61,7 +63,8 @@ to setup
   setup-secondary-homes
 
   ask patches with [pcolor != 0] [
-    set pcolor scale-color orange count people-here max [count people-here] of patches 0
+
+    set pcolor scale-color orange countpeople-here max [count people-here] of patches 0
   ]
 
 
@@ -225,7 +228,7 @@ to setup-people
        let h random-float 100
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
 
-
+update-patch
     ]
   ]
 
@@ -318,15 +321,15 @@ to go
 
   go-to-work
 
-   ask patches with [pcolor != 0] [
-    set pcolor scale-color orange count people-here max [count people-here] of patches 0
-  ]
 
   go-shopping
 
 
   go-home
 
+ask patches with [pcolor != 0] [
+    set pcolor scale-color orange count people-here max [count people-here] of patches 0
+  ]
 
   update-globals
     assign-color
@@ -341,11 +344,17 @@ to update-globals
  set n-deaths count people with [alive? = 0]
 end
 
+to update-patch
+  ask patch-here[
+    set people-counter people-counter + 1
+  ]
+end
 
 to go-to-work
   ask people[
  if job-id != 0[
     move-to [patch-here] of job-id
+      update-patch
   ]
   ]
 end
@@ -359,15 +368,18 @@ to go-shopping
     let my-shop one-of jobs with [is-shop? = 1] in-radius radius-movement
     if is-turtle? my-shop[
     move-to [patch-here] of my-shop
+          update-patch
     ]
   ]
   ]
+
   ]
 end
 
 to  go-home
   ask people [
     setxy item 0 residence-xy item 1 residence-xy
+    update-patch
   ]
 end
 @#$#@#$#@
@@ -439,7 +451,7 @@ n-cities
 n-cities
 0
 10
-5.0
+8.0
 1
 1
 NIL
@@ -583,21 +595,6 @@ NIL
 NIL
 NIL
 1
-
-SLIDER
-115
-245
-227
-278
-link-radius
-link-radius
-0
-100
-12.0
-1
-1
-NIL
-HORIZONTAL
 
 TEXTBOX
 13
@@ -779,6 +776,21 @@ other workplace
 9
 4.0
 1
+
+SLIDER
+115
+245
+227
+278
+link-radius
+link-radius
+0
+100
+12.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
