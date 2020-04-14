@@ -10,11 +10,17 @@ globals[
 breed [cities city]
 breed [people person]
 breed [jobs job]
+breed [houses house]
 
 cities-own[
   population
   ;;jobs
   id
+]
+
+houses-own[
+  house-id
+  resident
 ]
 
 links-own[
@@ -54,6 +60,7 @@ people-own[
   my-city-id
   job-id
   class
+  house-id
 ]
 
 to setup
@@ -65,7 +72,10 @@ to setup
   setup-people
   setup-city-links
   setup-jobs
+
+  if secondary-houses?[
   setup-secondary-homes
+  ]
 
   ask patches with [pcolor != 0] [
 
@@ -108,6 +118,25 @@ to setup-city-links
 end
 
 to setup-secondary-homes
+  let second-home-agentset people with [secondary-home = 1]
+
+  let n-secondary-homes count second-home-agentset
+  ask n-of n-secondary-homes patches[
+    sprout-houses 1 [
+      set shape "circle 2"
+      set size 1.4
+      set color grey
+      set resident one-of second-home-agentset
+      let resident-to-remove resident
+      set second-home-agentset second-home-agentset with [self != resident-to-remove]
+    ]
+  ]
+
+  ask houses[
+    ask resident [
+      set house-id myself
+    ]
+  ]
 end
 
 to setup-cities
@@ -177,6 +206,7 @@ to setup-people
       set residence-city idc
       set job-id 0
       set class 0
+      set house-id 0
       set recovery-time random-normal average-recovery-time 1
 
    ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
@@ -322,6 +352,12 @@ to setup-jobs
         ask worker [set job-id myself]
         ][
            set worker one-of non-essential-workers-agentset with [member? my-city-id [[neighbor-city-id] of patch-here] of myself = true]
+           ifelse is-turtle? worker[
+        ask worker [set job-id myself]
+          ][
+           set worker one-of non-essential-workers-agentset
+             ask worker [set job-id myself]
+          ]
         ]
        ; set worker-id [who] of worker
         ask non-essential-workers-agentset [
@@ -347,14 +383,34 @@ to go
 
   if lockdown-after-10-deaths [
 
-    if count people with [alive? = 0] > 9 and lockdown? = 0 [ask people with [work-status != "essential"] [set mobile? 0] set lockdown? 1]
+    if count people with [alive? = 0] > 9 and lockdown? = 0 [
+      ask people with [work-status != "essential"] [set mobile? 0]
+      if secondary-houses? [
+        ask people with [secondary-home = 1] [
+          move-to [patch-here] of house-id
+          set mobile? 0
+        ]
+      ]
+      set lockdown? 1
+    ]
   ]
+
 
   update-health
 
+  ifelse secondary-houses? [
+  go-to-work
+  go-shopping
+  ifelse lockdown? = 0 [
+    go-home
+    ][
+      go-home-or-secondary-house
+    ]
+  ][
   go-to-work
   go-shopping
   go-home
+  ]
 
 ask patches with [pcolor != 0] [
      set pcolor scale-color orange people-counter max [people-counter] of patches 0
@@ -423,6 +479,22 @@ to  go-home
   ]
 end
 
+to  go-home-or-secondary-house
+  ask people[
+    ifelse secondary-home = 1[
+      move-to [patch-here] of house-id
+         update-patch
+    ][
+     setxy item 0 residence-xy item 1 residence-xy
+    update-patch
+      if home-type = "collective"[
+    if infected? = 1 [
+      infect-people
+  ]
+  ]
+]
+  ]
+end
 
 to infect-people
   if any? people with [patch-here = [patch-here] of myself and immune? = 0][
@@ -552,7 +624,7 @@ proba-secondary-home
 proba-secondary-home
 0
 100
-15.0
+7.0
 1
 1
 NIL
@@ -922,9 +994,20 @@ SWITCH
 119
 secondary-houses?
 secondary-houses?
-1
+0
 1
 -1000
+
+MONITOR
+1070
+311
+1127
+356
+deaths
+count people with [alive? = 0]
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1191,6 +1274,16 @@ Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
 Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
 Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
+
+secondary-house
+false
+0
+Rectangle -7500403 false true 60 90 240 240
+Line -7500403 true 150 15 255 90
+Line -7500403 true 255 90 45 90
+Line -7500403 true 45 90 150 15
+Rectangle -7500403 false true 135 180 165 240
+Rectangle -7500403 false true 180 120 210 150
 
 sheep
 false
