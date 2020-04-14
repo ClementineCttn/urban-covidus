@@ -4,6 +4,7 @@ globals[
   n-deaths
   total-population
  non-essential-jobs
+  lockdown?
 ]
 
 breed [cities city]
@@ -31,6 +32,7 @@ patches-own[
   city-id
   density
   people-counter
+  neighbor-city-id
  ; worker-id
 ]
 people-own[
@@ -49,6 +51,7 @@ people-own[
 ;;  access-to-light ;; single-window / multiple-windows / balcony / garden
 ;;  tenure-type ;; owned / rented / socially-rented / none
   secondary-home ;; 0/1
+  my-city-id
   job-id
   class
 ]
@@ -57,6 +60,7 @@ to setup
   ca
 
   ask patches [set people-counter 0]
+  set lockdown? 0
   setup-cities
   setup-people
   setup-city-links
@@ -95,6 +99,10 @@ to setup-city-links
     ]
     if count link-neighbors < 1 [
       create-link-with min-one-of other cities [distance myself]
+    ]
+
+    ask patches with [city-id = [id] of myself][
+      set neighbor-city-id ([[id] of link-neighbors] of myself)
     ]
   ]
 end
@@ -160,6 +168,7 @@ to setup-people
       set color black
       set size 0.75
 
+      set my-city-id idc
       set alive? 1
       set infected? 0
       set mobile? 1
@@ -237,18 +246,18 @@ update-patch
     ]
   ]
 
-   ask people with [work-status = "essential"][set class "working"]
-   ask people with [work-status = "non-essential"][set class "professional"]
-  ask people with [class = 0][set class "other"]
+   ask people with [work-status = "essential" and home-type = "collective"][set class "poor"]
+   ask people with [work-status = "non-essential" and home-type = "individual"][set class "rich"]
+  ask people with [class = 0][set class "middle"]
 
 
 end
 
 to assign-color
   ifelse visualise-class [
-     ask people with [class = "working"][ set color red]
-  ask people with [class = "professional"][ set color green]
-  ask people with [class = "other"][ set color yellow ]
+     ask people with [class = "poor"][ set color red]
+  ask people with [class = "rich"][ set color green]
+  ask people with [class = "middle"][ set color yellow ]
   ][
   ask people with [infected? = 0 and immune? = 0][ set color 67]
   ask people with [infected? = 1][ set color yellow]
@@ -308,8 +317,12 @@ to setup-jobs
         set color 2
         set is-shop? 0
         set type-job "non-essential"
-        set worker one-of non-essential-workers-agentset ;in-radius link-radius
+        set worker one-of non-essential-workers-agentset with [my-city-id = [[city-id] of patch-here] of myself]
+       ifelse is-turtle? worker[
         ask worker [set job-id myself]
+        ][
+           set worker one-of non-essential-workers-agentset with [member? my-city-id [[neighbor-city-id] of patch-here] of myself = true]
+        ]
        ; set worker-id [who] of worker
         ask non-essential-workers-agentset [
           let worker-to-remove [worker] of myself
@@ -319,6 +332,7 @@ to setup-jobs
   ]
 
   ]
+
 
 end
 
@@ -331,7 +345,12 @@ to go
   if all? people [alive? = 0]
     [ stop ]
 
-update-health
+  if lockdown-after-10-deaths [
+
+    if count people with [alive? = 0] > 9 and lockdown? = 0 [ask people with [work-status != "essential"] [set mobile? 0] set lockdown? 1]
+  ]
+
+  update-health
 
   go-to-work
   go-shopping
@@ -362,10 +381,12 @@ end
 
 to go-to-work
   ask people[
+
  if job-id != 0[
+      if mobile? = 1[
     move-to [patch-here] of job-id
       update-patch
-
+      ]
   ]
   ]
 
@@ -374,7 +395,7 @@ end
 
 to go-shopping
    ask people[
- if mobile? = 1[
+
 
     if random average-days-between-shopping = 1 [
 
@@ -384,7 +405,7 @@ to go-shopping
           update-patch
     ]
   ]
-  ]
+
 
   ]
     ask people[ if infected? = 1 [ infect-people ]]
@@ -395,17 +416,21 @@ to  go-home
     setxy item 0 residence-xy item 1 residence-xy
     update-patch
   ]
-    ask people[ if infected? = 1 [ infect-people ]]
+  ask people with [home-type = "collective"][
+    if infected? = 1 [
+      infect-people
+  ]
+  ]
 end
 
 
 to infect-people
-
-  ask people with [patch-here = [patch-here] of myself] [
+  if any? people with [patch-here = [patch-here] of myself and immune? = 0][
+  ask people with [patch-here = [patch-here] of myself and immune? = 0] [
     let z random 100
     if z < infection-proba  [start-infection]
   ]
-
+  ]
 end
 
 to start-infection
@@ -415,7 +440,18 @@ to start-infection
 end
 
 to update-health
+  ask people with [infected? = 1][
+  if ticks > time-at-infection + recovery-time [recover]
 
+      let y random-float 100
+       if y < proba-dying  [set alive? 0 set mobile? 0]
+
+  ]
+end
+
+to recover
+  set infected? 0
+  set immune? 1
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -463,10 +499,10 @@ NIL
 1
 
 SLIDER
-228
-245
-372
-278
+225
+323
+369
+356
 max-pop-city
 max-pop-city
 200
@@ -478,25 +514,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-13
-245
-113
-278
+10
+323
+110
+356
 n-cities
 n-cities
 0
 10
-7.0
+8.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-13
-101
-195
-134
+10
+179
+192
+212
 essential-industry
 essential-industry
 0
@@ -508,10 +544,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-13
-153
-216
-186
+10
+231
+213
+264
 proba-secondary-home
 proba-secondary-home
 0
@@ -523,10 +559,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-255
-130
-465
-163
+252
+208
+462
+241
 share-collective-housing
 share-collective-housing
 0
@@ -538,60 +574,60 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-15
-86
-290
-113
+12
+164
+287
+191
 share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-15
-136
-272
-164
+12
+214
+269
+242
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-256
-113
-546
-141
+253
+191
+543
+219
 share of households living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-14
-66
-164
-85
+11
+144
+161
+163
 FROM STATISTICS
 15
 16.0
 0
 
 TEXTBOX
-13
-341
-163
-359
+10
+419
+160
+437
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-14
-228
-164
-246
+11
+306
+161
+324
 Urban context
 11
 0.0
@@ -632,10 +668,10 @@ NIL
 1
 
 TEXTBOX
-13
-205
-162
-223
+10
+283
+159
+301
 FREE PARAMETERS
 14
 16.0
@@ -657,16 +693,16 @@ true
 true
 "" ""
 PENS
-"infected" 1.0 0 -1184463 true "plot n-infected" "plot n-infected"
-"recovered" 1.0 0 -13345367 true "plot n-recovered" "plot n-recovered"
-"dead" 1.0 0 -16777216 true "plot n-deaths\n " "plot n-deaths"
+"infected" 1.0 0 -1184463 true "plot count people with [infected? = 1]" "plot count people with [infected? = 1]"
+"recovered" 1.0 0 -13345367 true "plot count people with [immune? = 1]" "plot count people with [immune? = 1]"
+"dead" 1.0 0 -16777216 true "plot count people with [alive? = 0]\n " "plot count people with [alive? = 0]"
 "susceptible" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-12
-300
-126
-333
+9
+378
+123
+411
 infection-proba
 infection-proba
 0
@@ -678,35 +714,35 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-13
-284
-163
-302
+10
+362
+160
+380
 Epidemiological variables
 11
 0.0
 1
 
 SLIDER
-127
-299
-295
-332
+124
+377
+292
+410
 average-recovery-time
 average-recovery-time
 0
 30
-9.0
+14.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-12
-358
-232
-391
+9
+436
+229
+469
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -718,10 +754,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-233
-358
-377
-391
+230
+436
+374
+469
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -733,10 +769,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-377
-358
-503
-391
+374
+436
+500
+469
 radius-movement
 radius-movement
 0
@@ -798,10 +834,10 @@ essential workplace
 1
 
 SLIDER
-115
-245
-227
-278
+112
+323
+224
+356
 link-radius
 link-radius
 0
@@ -849,9 +885,46 @@ true
 true
 "" ""
 PENS
-"working-class" 1.0 0 -2674135 true "plot (count people with [class = \"working\" and infected? = 1] * 100)/ count people with [class = \"working\"] " "plot (count people with [class = \"working\" and infected? = 1] * 100)/ count people with [class = \"working\"] "
-"other" 1.0 0 -1184463 true "plot (count people with [class = \"other\" and infected? = 1] * 100)/ count people with [class = \"other\"] " "plot (count people with [class = \"other\" and infected? = 1] * 100)/ count people with [class = \"other\"] "
-"professional" 1.0 0 -12087248 true "plot (count people with [class = \"professional\" and infected? = 1] * 100)/ count people with [class = \"professional\"] " "plot (count people with [class = \"professional\" and infected? = 1] * 100)/ count people with [class = \"professional\"] "
+"poor" 1.0 0 -2674135 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
+"middle" 1.0 0 -1184463 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
+"rich" 1.0 0 -12087248 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
+
+SLIDER
+293
+377
+397
+410
+proba-dying
+proba-dying
+0
+100
+0.1
+0.1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+94
+52
+294
+85
+lockdown-after-10-deaths
+lockdown-after-10-deaths
+0
+1
+-1000
+
+SWITCH
+94
+86
+273
+119
+secondary-houses?
+secondary-houses?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
