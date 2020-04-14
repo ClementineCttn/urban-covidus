@@ -50,6 +50,7 @@ people-own[
 ;;  tenure-type ;; owned / rented / socially-rented / none
   secondary-home ;; 0/1
   job-id
+  class
 ]
 
 to setup
@@ -64,14 +65,15 @@ to setup
 
   ask patches with [pcolor != 0] [
 
-    set pcolor scale-color orange countpeople-here max [count people-here] of patches 0
+    set pcolor scale-color orange people-counter max [people-counter] of patches 0
   ]
 
 
+reset-ticks
 
-  update-globals
-  assign-color
-  reset-ticks
+   ask one-of people [start-infection]
+   update-globals
+    assign-color
 
 end
 
@@ -156,7 +158,7 @@ to setup-people
       set residence-xy list xcor ycor
       set shape "person"
       set color black
-      set size 0.5
+      set size 0.75
 
       set alive? 1
       set infected? 0
@@ -165,7 +167,7 @@ to setup-people
       set time-at-infection 0
       set residence-city idc
       set job-id 0
-
+      set class 0
       set recovery-time random-normal average-recovery-time 1
 
    ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
@@ -229,19 +231,30 @@ to setup-people
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
 
 update-patch
+
+
+
     ]
   ]
 
-  ask one-of people [set infected? 1]
-   update-globals
-    assign-color
+   ask people with [work-status = "essential"][set class "working"]
+   ask people with [work-status = "non-essential"][set class "professional"]
+  ask people with [class = 0][set class "other"]
+
+
 end
 
 to assign-color
-  ask people with [infected? = 0 and immune? = 0][ set color 67 set size 1]
-  ask people with [infected? = 1][ set color yellow set size 1.5]
+  ifelse visualise-class [
+     ask people with [class = "working"][ set color red]
+  ask people with [class = "professional"][ set color green]
+  ask people with [class = "other"][ set color yellow ]
+  ][
+  ask people with [infected? = 0 and immune? = 0][ set color 67]
+  ask people with [infected? = 1][ set color yellow]
   ask people with [immune? = 1][ set color blue ]
-  ask people with [alive? = 0][ set color black set size 1 set shape "x"]
+  ask people with [alive? = 0][ set color black set shape "x"]
+  ]
 end
 
 
@@ -256,7 +269,7 @@ to setup-jobs
      while [any? essential-workers-agentset]  [
    ask patches with [pcolor != 0] [
    ;     let idc [city-id] of self
-      let dens min list ([density] of self * 1.5)  ( count essential-workers-agentset in-radius link-radius)
+      let dens min list ([density] of self * 1.2)  ( count essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "square"
         set size 0.7
@@ -295,7 +308,7 @@ to setup-jobs
         set color 2
         set is-shop? 0
         set type-job "non-essential"
-        set worker one-of non-essential-workers-agentset in-radius link-radius
+        set worker one-of non-essential-workers-agentset ;in-radius link-radius
         ask worker [set job-id myself]
        ; set worker-id [who] of worker
         ask non-essential-workers-agentset [
@@ -318,17 +331,14 @@ to go
   if all? people [alive? = 0]
     [ stop ]
 
+update-health
 
   go-to-work
-
-
   go-shopping
-
-
   go-home
 
 ask patches with [pcolor != 0] [
-    set pcolor scale-color orange count people-here max [count people-here] of patches 0
+     set pcolor scale-color orange people-counter max [people-counter] of patches 0
   ]
 
   update-globals
@@ -355,8 +365,11 @@ to go-to-work
  if job-id != 0[
     move-to [patch-here] of job-id
       update-patch
+
   ]
   ]
+
+  ask people[ if infected? = 1 [ infect-people ]]
 end
 
 to go-shopping
@@ -374,6 +387,7 @@ to go-shopping
   ]
 
   ]
+    ask people[ if infected? = 1 [ infect-people ]]
 end
 
 to  go-home
@@ -381,6 +395,27 @@ to  go-home
     setxy item 0 residence-xy item 1 residence-xy
     update-patch
   ]
+    ask people[ if infected? = 1 [ infect-people ]]
+end
+
+
+to infect-people
+
+  ask people with [patch-here = [patch-here] of myself] [
+    let z random 100
+    if z < infection-proba  [start-infection]
+  ]
+
+end
+
+to start-infection
+  set infected? 1
+  set time-at-infection ticks
+  set recovery-time rnormal average-recovery-time 2
+end
+
+to update-health
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -436,7 +471,7 @@ max-pop-city
 max-pop-city
 200
 10000
-1000.0
+700.0
 100
 1
 NIL
@@ -451,7 +486,7 @@ n-cities
 n-cities
 0
 10
-8.0
+7.0
 1
 1
 NIL
@@ -488,10 +523,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-249
-103
-459
-136
+255
+130
+465
+163
 share-collective-housing
 share-collective-housing
 0
@@ -523,11 +558,11 @@ share of households with secondary home
 1
 
 TEXTBOX
-250
-86
-540
-114
-share of hosueholds living in collective housing
+256
+113
+546
+141
+share of households living in collective housing
 11
 0.0
 1
@@ -653,21 +688,6 @@ Epidemiological variables
 1
 
 SLIDER
-296
-299
-425
-332
-radius-infection
-radius-infection
-0
-10
-0.7
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
 127
 299
 295
@@ -728,9 +748,9 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-430
+393
 10
-580
+543
 28
 infected person
 9
@@ -738,9 +758,9 @@ infected person
 1
 
 TEXTBOX
-429
+392
 22
-579
+542
 40
 susceptible person
 9
@@ -748,9 +768,9 @@ susceptible person
 1
 
 TEXTBOX
-430
+393
 34
-580
+543
 52
 immune person
 9
@@ -758,9 +778,9 @@ immune person
 1
 
 TEXTBOX
-430
+393
 45
-580
+543
 63
 shop
 9
@@ -768,11 +788,11 @@ shop
 1
 
 TEXTBOX
-430
+393
 56
-580
+543
 74
-other workplace
+essential workplace
 9
 4.0
 1
@@ -791,6 +811,47 @@ link-radius
 1
 NIL
 HORIZONTAL
+
+TEXTBOX
+393
+67
+543
+85
+non-essential workplace
+9
+2.0
+1
+
+SWITCH
+224
+10
+372
+43
+visualise-class
+visualise-class
+1
+1
+-1000
+
+PLOT
+1066
+161
+1357
+311
+Share of infected per class
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"working-class" 1.0 0 -2674135 true "plot (count people with [class = \"working\" and infected? = 1] * 100)/ count people with [class = \"working\"] " "plot (count people with [class = \"working\" and infected? = 1] * 100)/ count people with [class = \"working\"] "
+"other" 1.0 0 -1184463 true "plot (count people with [class = \"other\" and infected? = 1] * 100)/ count people with [class = \"other\"] " "plot (count people with [class = \"other\" and infected? = 1] * 100)/ count people with [class = \"other\"] "
+"professional" 1.0 0 -12087248 true "plot (count people with [class = \"professional\" and infected? = 1] * 100)/ count people with [class = \"professional\"] " "plot (count people with [class = \"professional\" and infected? = 1] * 100)/ count people with [class = \"professional\"] "
 
 @#$#@#$#@
 ## WHAT IS IT?
