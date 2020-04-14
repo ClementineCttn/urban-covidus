@@ -317,11 +317,11 @@ to setup-jobs
         set color 2
         set is-shop? 0
         set type-job "non-essential"
-        set worker one-of non-essential-workers-agentset with [my-city-id  [[city-id] of patch-here] of myself]
+        set worker one-of non-essential-workers-agentset with [my-city-id = [[city-id] of patch-here] of myself]
        ifelse is-turtle? worker[
         ask worker [set job-id myself]
         ][
-           set worker one-of non-essential-workers-agentset with [my-city-id = [[neighbor-city-id] of patch-here] of myself]
+           set worker one-of non-essential-workers-agentset with [member? my-city-id [[neighbor-city-id] of patch-here] of myself = true]
 
         ]
        ; set worker-id [who] of worker
