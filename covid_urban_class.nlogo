@@ -121,9 +121,9 @@ to setup-secondary-homes
   let second-home-agentset people with [secondary-home = 1]
 
   let n-secondary-homes count second-home-agentset
-  ask n-of n-secondary-homes patches[
+  ask n-of n-secondary-homes patches with [pcolor = black][
     sprout-houses 1 [
-      set shape "circle 2"
+      set shape "circle 3"
       set size 1.4
       set color grey
       set resident one-of second-home-agentset
@@ -259,9 +259,6 @@ to setup-people
       ;;source: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwizuoyypbHoAhWNgVwKHdERDqIQFjAAegQIBBAB&url=https%3A%2F%2Fwww.insee.fr%2Ffr%2Fstatistiques%2Ffichier%2F2586038%2FLOGFRA17j1_F5.1.pdf&usg=AOvVaw1FYYaTUWdRFyhe9mqPV_zI
       ;; 15% of households have another residence
 
-         let g random-float 100
-       ifelse (g < proba-secondary-home) [set secondary-home 1][set secondary-home 0]
-
 
          ;;source : https://www.insee.fr/fr/statistiques/3620894
       ;; in France 2018 for municipalities with population between 2000 and 100000 residents: 33% collective homes, 66% individual
@@ -269,17 +266,22 @@ to setup-people
        let h random-float 100
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
 
+       let g random-float 100
+      if (work-status = "essential" and home-type = "collective")[set class "poor"]
+       if (work-status = "non-essential" and home-type = "individual")[
+        set class "rich"
+        ifelse (g < proba-secondary-home * 2) [set secondary-home 1][set secondary-home 0]
+      ]
+      if (class = 0)[
+        set class "middle"
+      ifelse (g < proba-secondary-home) [set secondary-home 1][set secondary-home 0]]
+
 update-patch
 
 
 
     ]
   ]
-
-   ask people with [work-status = "essential" and home-type = "collective"][set class "poor"]
-   ask people with [work-status = "non-essential" and home-type = "individual"][set class "rich"]
-  ask people with [class = 0][set class "middle"]
-
 
 end
 
@@ -623,8 +625,8 @@ SLIDER
 proba-secondary-home
 proba-secondary-home
 0
-100
-7.0
+50
+5.0
 1
 1
 NIL
@@ -639,7 +641,7 @@ share-collective-housing
 share-collective-housing
 0
 100
-33.0
+50.0
 1
 1
 NIL
@@ -1009,6 +1011,17 @@ count people with [alive? = 0]
 1
 11
 
+MONITOR
+275
+86
+401
+131
+secondary houses
+count people with [secondary-home = 1]
+17
+1
+11
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -1112,6 +1125,11 @@ false
 0
 Circle -7500403 true true 0 0 300
 Circle -16777216 true false 30 30 240
+
+circle 3
+true
+0
+Circle -7500403 false true 0 0 300
 
 cow
 false
