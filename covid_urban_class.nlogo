@@ -77,10 +77,10 @@ to setup
   setup-secondary-homes
   ]
 
-  ask patches with [pcolor != 0] [
+ ; ask patches with [pcolor != 0] [
 
-    set pcolor scale-color orange people-counter max [people-counter] of patches 0
-  ]
+;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
+ ; ]
 
 
 reset-ticks
@@ -123,7 +123,7 @@ to setup-secondary-homes
   let n-secondary-homes count second-home-agentset
   ask n-of n-secondary-homes patches with [pcolor = black][
     sprout-houses 1 [
-      set shape "circle 3"
+      set shape "sec-house"
       set size 1.4
       set color grey
       set resident one-of second-home-agentset
@@ -394,6 +394,7 @@ to go
         ]
       ]
       set lockdown? 1
+      print "Lockdown activated. People flee to their secondary homes"
     ]
   ]
 
@@ -1292,6 +1293,11 @@ Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
 Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
 Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
+
+sec-house
+false
+0
+Polygon -7500403 false true 75 120 75 270 225 270 225 120 255 120 150 30 45 120
 
 secondary-house
 false
