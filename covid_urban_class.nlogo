@@ -61,12 +61,14 @@ people-own[
   job-id
   class
   house-id
+  activity
+  activity-at-infection
 ]
 
 to setup
   ca
 
-  ask patches [set people-counter 0]
+ ; ask patches [set people-counter 0 ]
   set lockdown? 0
   setup-cities
   setup-people
@@ -121,7 +123,7 @@ to setup-secondary-homes
   let second-home-agentset people with [secondary-home = 1]
 
   let n-secondary-homes count second-home-agentset
-  ask n-of n-secondary-homes patches with [pcolor = black][
+  ask n-of n-secondary-homes patches with [pcolor = 69][
     sprout-houses 1 [
       set shape "sec-house"
       set size 1.4
@@ -140,12 +142,12 @@ to setup-secondary-homes
 end
 
 to setup-cities
-  ask patches [set pcolor 0]
+  ask patches [set pcolor 69]
    let i 1
   create-cities n-cities [
     setxy random-xcor random-ycor
     while [
-      [pcolor] of patch-here != 0
+      [pcolor] of patch-here != 69
     ] [ setxy random-xcor random-ycor ]
     set id i
     set population max-pop-city / i
@@ -154,7 +156,7 @@ to setup-cities
     set size 0
     let p population / 100
     ask patch-here [
-      set pcolor 120 + i
+      set pcolor 9.9
       set city-id i
       set density n-cities - i + 2
 
@@ -186,7 +188,7 @@ end
 
 
 to setup-people
-  ask patches with [pcolor != 0] [
+  ask patches with [pcolor != 69] [
     let idc [city-id] of self
     let dens [density] of self
     sprout-people dens [
@@ -207,6 +209,8 @@ to setup-people
       set job-id 0
       set class 0
       set house-id 0
+      set activity 0
+      set activity-at-infection 0
       set recovery-time random-normal average-recovery-time 1
 
    ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
@@ -286,16 +290,12 @@ update-patch
 end
 
 to assign-color
-  ifelse visualise-class [
-     ask people with [class = "poor"][ set color red]
-  ask people with [class = "rich"][ set color green]
-  ask people with [class = "middle"][ set color yellow ]
-  ][
-  ask people with [infected? = 0 and immune? = 0][ set color 67]
-  ask people with [infected? = 1][ set color yellow]
-  ask people with [immune? = 1][ set color blue ]
+
+  ask people with [infected? = 0 and immune? = 0][ set color 28]
+  ask people with [infected? = 1][ set color 84]
+  ask people with [immune? = 1][ set color 35 ]
   ask people with [alive? = 0][ set color black set shape "x"]
-  ]
+
 end
 
 
@@ -308,12 +308,12 @@ to setup-jobs
   let essential-workers-agentset people with [work-status = "essential"]
 
      while [any? essential-workers-agentset]  [
-   ask patches with [pcolor != 0] [
+   ask patches with [pcolor != 69] [
    ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.2)  ( count essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "square"
-        set size 0.7
+        set size 0.5
         set color 5
         set is-shop? 0
         set type-job "essential"
@@ -333,19 +333,19 @@ to setup-jobs
   while [ n-shops >= 1 ] [
     ask one-of jobs with [is-shop? = 0] [
       set is-shop? 1
-      set color 125
+      set color 25
       set n-shops n-shops - 1
     ]
   ]
 
    let non-essential-workers-agentset people with [work-status = "non-essential"]
   while [any? non-essential-workers-agentset]  [
-   ask patches with [pcolor != 0] [
+   ask patches with [pcolor != 69] [
    ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.5)  ( count non-essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "square"
-        set size 0.7
+        set size 0.5
         set color 2
         set is-shop? 0
         set type-job "non-essential"
@@ -383,7 +383,6 @@ to go
   if all? people [alive? = 0]
     [ stop ]
 
-  if lockdown-after-10-deaths [
 
     if count people with [alive? = 0] > 9 and lockdown? = 0 [
       ask people with [work-status != "essential"] [set mobile? 0]
@@ -396,7 +395,7 @@ to go
       set lockdown? 1
       print "Lockdown activated. People flee to their secondary homes"
     ]
-  ]
+
 
 
   update-health
@@ -445,6 +444,7 @@ to go-to-work
       if mobile? = 1[
     move-to [patch-here] of job-id
       update-patch
+        set activity "work"
       ]
   ]
   ]
@@ -462,6 +462,7 @@ to go-shopping
     if is-turtle? my-shop[
     move-to [patch-here] of my-shop
           update-patch
+        set activity "shop"
     ]
   ]
 
@@ -474,6 +475,7 @@ to  go-home
   ask people [
     setxy item 0 residence-xy item 1 residence-xy
     update-patch
+    set activity "home"
   ]
   ask people with [home-type = "collective"][
     if infected? = 1 [
@@ -487,9 +489,11 @@ to  go-home-or-secondary-house
     ifelse secondary-home = 1[
       move-to [patch-here] of house-id
          update-patch
+       set activity "home"
     ][
      setxy item 0 residence-xy item 1 residence-xy
     update-patch
+       set activity "home"
       if home-type = "collective"[
     if infected? = 1 [
       infect-people
@@ -512,6 +516,7 @@ to start-infection
   set infected? 1
   set time-at-infection ticks
   set recovery-time random-normal average-recovery-time 2
+  set activity-at-infection activity
 end
 
 to update-health
@@ -530,13 +535,13 @@ to recover
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-520
-10
-1061
-552
+510
+17
+1040
+548
 -1
 -1
-13.0
+12.732
 1
 10
 1
@@ -557,11 +562,11 @@ ticks
 30.0
 
 BUTTON
-2
-10
-68
-43
-NIL
+46
+44
+130
+77
+Initialise
 setup
 NIL
 1
@@ -574,10 +579,10 @@ NIL
 1
 
 SLIDER
-225
-323
-369
-356
+1288
+339
+1411
+372
 max-pop-city
 max-pop-city
 200
@@ -589,10 +594,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-323
-110
-356
+1073
+339
+1173
+372
 n-cities
 n-cities
 0
@@ -604,10 +609,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-179
-192
-212
+1072
+178
+1254
+211
 essential-industry
 essential-industry
 0
@@ -619,10 +624,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-231
-213
-264
+1072
+230
+1275
+263
 proba-secondary-home
 proba-secondary-home
 0
@@ -634,10 +639,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-252
-208
-462
-241
+1072
+284
+1282
+317
 share-collective-housing
 share-collective-housing
 0
@@ -649,88 +654,61 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-12
-164
-287
-191
+1074
+163
+1349
+190
 share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-12
-214
-269
-242
+1074
+213
+1331
+241
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-253
-191
-543
-219
+1073
+267
+1363
+295
 share of households living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-11
-144
-161
-163
-FROM STATISTICS
-15
-16.0
-0
-
-TEXTBOX
-10
-419
-160
-437
+1074
+462
+1224
+480
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-11
-306
-161
-324
+1074
+322
+1224
+340
 Urban context
 11
 0.0
 1
 
 BUTTON
-68
-10
-153
-43
-go-once
-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-154
-10
-217
-43
-NIL
+49
+100
+127
+133
+Simulate
 go
 T
 1
@@ -740,24 +718,14 @@ NIL
 NIL
 NIL
 NIL
-1
-
-TEXTBOX
-10
-283
-159
-301
-FREE PARAMETERS
-14
-16.0
 1
 
 PLOT
-1066
-10
-1359
-160
-situation
+213
+42
+494
+192
+Global epidemic situation
 NIL
 NIL
 0.0
@@ -768,16 +736,16 @@ true
 true
 "" ""
 PENS
-"infected" 1.0 0 -1184463 true "plot count people with [infected? = 1]" "plot count people with [infected? = 1]"
-"recovered" 1.0 0 -13345367 true "plot count people with [immune? = 1]" "plot count people with [immune? = 1]"
+"infected" 1.0 0 -12345184 true "plot count people with [infected? = 1]" "plot count people with [infected? = 1]"
+"recovered" 1.0 0 -6459832 true "plot count people with [immune? = 1]" "plot count people with [immune? = 1]"
 "dead" 1.0 0 -16777216 true "plot count people with [alive? = 0]\n " "plot count people with [alive? = 0]"
-"susceptible" 1.0 0 -13840069 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
+"susceptible" 1.0 0 -408670 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-9
-378
-123
-411
+1072
+393
+1186
+426
 infection-proba
 infection-proba
 0
@@ -789,35 +757,35 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-10
-362
-160
-380
+1073
+377
+1223
+395
 Epidemiological variables
 11
 0.0
 1
 
 SLIDER
-124
-377
-292
-410
+1187
+392
+1355
+425
 average-recovery-time
 average-recovery-time
 0
 30
-14.0
+10.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-9
-436
-229
-469
+1073
+479
+1293
+512
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -829,10 +797,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-230
-436
-374
-469
+1200
+513
+1344
+546
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -844,10 +812,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-374
-436
-500
-469
+1073
+513
+1199
+546
 radius-movement
 radius-movement
 0
@@ -859,60 +827,60 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-393
-10
-543
-28
+1073
+57
+1223
+75
 infected person
 9
 44.0
 1
 
 TEXTBOX
-392
-22
-542
-40
+1072
+69
+1222
+87
 susceptible person
 9
 67.0
 1
 
 TEXTBOX
-393
-34
-543
-52
+1073
+81
+1223
+99
 immune person
 9
 105.0
 1
 
 TEXTBOX
-393
-45
-543
-63
+1073
+92
+1223
+110
 shop
 9
 125.0
 1
 
 TEXTBOX
-393
-56
-543
-74
+1073
+103
+1223
+121
 essential workplace
 9
 4.0
 1
 
 SLIDER
-112
-323
-224
-356
+1175
+339
+1287
+372
 link-radius
 link-radius
 0
@@ -924,31 +892,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-393
-67
-543
-85
+1073
+114
+1223
+132
 non-essential workplace
 9
 2.0
 1
 
-SWITCH
-224
-10
-372
-43
-visualise-class
-visualise-class
-1
-1
--1000
-
 PLOT
-1066
-161
-1357
-311
+9
+200
+300
+350
 % infected per class
 NIL
 NIL
@@ -960,15 +917,15 @@ true
 true
 "" ""
 PENS
-"poor" 1.0 0 -2674135 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
-"middle" 1.0 0 -1184463 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
-"rich" 1.0 0 -12087248 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
+"working class" 1.0 0 -2674135 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
+"middle class" 1.0 0 -1184463 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
+"priviledged" 1.0 0 -12087248 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
 
 SLIDER
-293
-377
-418
-410
+1072
+427
+1197
+460
 proba-dying
 proba-dying
 0
@@ -980,21 +937,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-94
-64
-294
-97
-lockdown-after-10-deaths
-lockdown-after-10-deaths
-0
-1
--1000
-
-SWITCH
-94
-98
-273
-131
+14
+514
+193
+547
 secondary-houses?
 secondary-houses?
 0
@@ -1002,32 +948,21 @@ secondary-houses?
 -1000
 
 MONITOR
-295
-54
-345
-99
-deaths
+80
+381
+169
+426
+Total deaths
 count people with [alive? = 0]
 17
 1
 11
 
-MONITOR
-275
-98
-390
-143
-secondary houses
-count people with [secondary-home = 1]
-17
-1
-11
-
 PLOT
-1067
-311
-1354
-476
+231
+382
+497
+547
 % of population dead
 NIL
 NIL
@@ -1039,9 +974,121 @@ true
 true
 "" ""
 PENS
-"poor" 1.0 0 -2674135 true "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])" "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])"
-"middle" 1.0 0 -4079321 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
-"rich" 1.0 0 -12087248 true "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])" "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])"
+"working class" 1.0 0 -2674135 true "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])" "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])"
+"middle class" 1.0 0 -4079321 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
+"priviledged" 1.0 0 -12087248 true "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])" "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])"
+
+MONITOR
+320
+250
+495
+295
+% working-class infections
+(100 * count people with [class = \"poor\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"poor\"]
+2
+1
+11
+
+MONITOR
+320
+302
+496
+347
+% priviledged class infections
+(100 * count people with [class = \"rich\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"rich\"]
+2
+1
+11
+
+TEXTBOX
+320
+210
+480
+242
+Did they catch the virus while at work?
+13
+0.0
+1
+
+TEXTBOX
+11
+159
+191
+207
+What proportion of each social class is infected ?
+13
+0.0
+1
+
+TEXTBOX
+214
+20
+467
+52
+Where is the epidemic at?
+13
+0.0
+1
+
+TEXTBOX
+1073
+31
+1223
+49
+Who's who?
+13
+0.0
+1
+
+TEXTBOX
+31
+360
+181
+392
+How many people died so far?
+13
+0.0
+1
+
+TEXTBOX
+232
+360
+405
+392
+Who died (by social class)?
+13
+0.0
+1
+
+TEXTBOX
+14
+458
+187
+506
+Allow priviledged and middle class to own and isolate in second homes?
+13
+0.0
+1
+
+TEXTBOX
+41
+22
+191
+40
+Setup the world
+13
+0.0
+1
+
+TEXTBOX
+31
+80
+181
+98
+Start the simulation
+13
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
