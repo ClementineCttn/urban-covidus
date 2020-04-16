@@ -73,7 +73,6 @@ to setup
   reset-ticks
 
   ask one-of people [start-infection]
-
   assign-color
 
 end
@@ -89,7 +88,6 @@ to setup-city-links
       set  potential-infrastructure ([population] of end1 * [population] of end2) / ( d12 ^ 2 )
       if potential-infrastructure = max [[potential-infrastructure] of my-out-links] of t1 [set best 1]
     ]
-
     ask my-out-links with [potential-infrastructure < median [potential-infrastructure] of links / 1.5 and best != 1]
     [
       die
@@ -97,7 +95,6 @@ to setup-city-links
     if count link-neighbors < 1 [
       create-link-with min-one-of other cities [distance myself]
     ]
-
     ask patches with [city-id = [id] of myself][
       set neighbor-city-id ([[id] of link-neighbors] of myself)
     ]
@@ -106,7 +103,6 @@ end
 
 to setup-secondary-homes
   let second-home-agentset people with [secondary-home = 1]
-
   let n-secondary-homes count second-home-agentset
   ask n-of n-secondary-homes patches with [pcolor = 69][
     sprout-houses 1 [
@@ -136,15 +132,12 @@ to setup-cities
     ] [ setxy random-xcor random-ycor ]
     set id i
     set population max-pop-city / i
-    ;set shape "circle"
-    ;set color pink
     set size 0
     let p population / 100
     ask patch-here [
       set pcolor 9.9
       set city-id i
       set density n-cities - i + 2
-
       ask patches in-radius p  [
         set pcolor [pcolor] of myself
         set city-id i
