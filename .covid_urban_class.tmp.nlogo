@@ -197,7 +197,7 @@ to setup-people
       set residence-xy list xcor ycor
       set shape "person"
       set color black
-      set size 0.75
+      set size 0.6
 
       set my-city-id idc
       set alive? 1
@@ -271,13 +271,16 @@ to setup-people
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
 
        let g random-float 100
-      if (work-status = "essential" and home-type = "collective")[set class "poor"]
+      if (work-status = "essential" and home-type = "collective")[set class "poor" set shape "circle"]
        if (work-status = "non-essential" and home-type = "individual")[
         set class "rich"
+        set shape "triangle"
         ifelse (g < proba-secondary-home * 2) [set secondary-home 1][set secondary-home 0]
       ]
       if (class = 0)[
         set class "middle"
+         set shape "square"
+
       ifelse (g < proba-secondary-home) [set secondary-home 1][set secondary-home 0]]
 
 update-patch
@@ -312,9 +315,9 @@ to setup-jobs
    ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.2)  ( count essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
-        set shape "square"
-        set size 0.5
-        set color 5
+        set shape "flag"
+        set size 0.7
+        set color 2
         set is-shop? 0
         set type-job "essential"
         set worker one-of essential-workers-agentset in-radius link-radius
@@ -344,9 +347,9 @@ to setup-jobs
    ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.5)  ( count non-essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
-        set shape "square"
-        set size 0.5
-        set color 2
+        set shape "flag"
+        set size 0.7
+        set color 5
         set is-shop? 0
         set type-job "non-essential"
         set worker one-of non-essential-workers-agentset with [my-city-id = [[city-id] of patch-here] of myself]
@@ -393,6 +396,7 @@ to go
         ]
       ]
       set lockdown? 1
+    ask jobs with [type-job = "non-essential"][die]
       print "Lockdown activated. People flee to their secondary homes"
     ]
 
@@ -917,9 +921,9 @@ true
 true
 "" ""
 PENS
-"working class" 1.0 0 -2674135 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
+"working class" 1.0 0 -13345367 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
 "middle class" 1.0 0 -1184463 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
-"priviledged" 1.0 0 -12087248 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
+"priviledged" 1.0 0 -4757638 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
 
 SLIDER
 1072
@@ -930,7 +934,7 @@ proba-dying
 proba-dying
 0
 100
-0.1
+0.2
 0.1
 1
 NIL
@@ -981,7 +985,7 @@ PENS
 MONITOR
 320
 250
-563
+495
 295
 % working-class infections
 (100 * count people with [class = \"poor\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"poor\"]
@@ -992,9 +996,9 @@ MONITOR
 MONITOR
 320
 302
-494
+496
 347
-% infection from work (RICH)
+% priviledged class infections
 (100 * count people with [class = \"rich\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"rich\"]
 2
 1
@@ -1061,11 +1065,11 @@ Who died (by social class)?
 1
 
 TEXTBOX
-15
-479
-203
-527
-Allow richer people to own and isolate in second homes
+14
+458
+187
+506
+Allow priviledged and middle class to own and isolate in second homes?
 13
 0.0
 1
