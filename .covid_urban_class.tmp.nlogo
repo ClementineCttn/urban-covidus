@@ -1,9 +1,6 @@
 globals[
-  n-infected
-  n-recovered
-  n-deaths
   total-population
- non-essential-jobs
+  non-essential-jobs
   lockdown?
 ]
 
@@ -14,8 +11,7 @@ breed [houses house]
 
 cities-own[
   population
-  ;;jobs
-  id
+   id
 ]
 
 houses-own[
@@ -30,7 +26,7 @@ links-own[
 
 jobs-own[
   type-job
-  worker ;-id
+  worker
   is-shop?
 ]
 
@@ -39,12 +35,11 @@ patches-own[
   density
   people-counter
   neighbor-city-id
- ; worker-id
 ]
 people-own[
   alive? ;; 0/1
   age
-  infected? ;; 0/10/1
+  infected? ;; 0/1
   mobile? ;; 0/1
   immune? ;; 0/1
   time-at-infection
@@ -54,8 +49,6 @@ people-own[
   residence-city ;;
   residence-xy
   home-type ;; collective/individual
-;;  access-to-light ;; single-window / multiple-windows / balcony / garden
-;;  tenure-type ;; owned / rented / socially-rented / none
   secondary-home ;; 0/1
   my-city-id
   job-id
@@ -67,8 +60,6 @@ people-own[
 
 to setup
   ca
-
- ; ask patches [set people-counter 0 ]
   set lockdown? 0
   setup-cities
   setup-people
@@ -79,17 +70,11 @@ to setup
   setup-secondary-homes
   ]
 
- ; ask patches with [pcolor != 0] [
+  reset-ticks
 
-;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
- ; ]
+  ask one-of people [start-infection]
 
-
-reset-ticks
-
-   ask one-of people [start-infection]
-   update-globals
-    assign-color
+  assign-color
 
 end
 
@@ -169,22 +154,10 @@ to setup-cities
         set density round (n-cities - i + 2) / 2
       ]
     ]
-
-
     set i i + 1
   ]
 
-  ;; source OCDE (2020), Lits d’hôpitaux (indicateur). doi: 10.1787/9b82df80-fr (Consulté le 24 mars 2020)
-  ;; in france in 2018 : 6 hospital beds per 1000 hab. = 0.6%
-   ;; in france in 2018 : 3 icu beds per 1000 hab. = 0.3%
-   set total-population round ( sum [population] of cities )
-
-
- ; ask cities with [id = 1] [create-links-with cities with [id = 2]]
- ; ask cities with [count my-links = 0] [
- ;   create-links-with cities with [id = 1]
- ; ]
-end
+ end
 
 
 to setup-people
@@ -225,7 +198,6 @@ to setup-people
       ]
       ]
 
-
       ;; distribution of active workers by age from French population in 2016, Figure 2 https://www.insee.fr/fr/statistiques/3303384?sommaire=3353488
       ;; nb. age categories are not exactly coincidental (÷- 5 years)
 
@@ -245,13 +217,11 @@ to setup-people
       ]
       if [age] of self = "over-75" [set active 0]
 
-
-      ;; distribution of active workers by professions in France in 2016 https://www.insee.fr/fr/statistiques/3303413?sommaire=3353488
+     ;; distribution of active workers by professions in France in 2016 https://www.insee.fr/fr/statistiques/3303413?sommaire=3353488
       ;; large estimate of essential workers = 46.6%
       ;; 7.1% (human health) + 7.4% social + 12.9% commerce + 9.1% public admin + 4.6% finance + 5.5% Transport
 
      let c random-float 100
-
        if [active] of self = 1 [
         ifelse (c < essential-industry) [
           set work-status "essential"
@@ -260,16 +230,11 @@ to setup-people
         ]
       ]
 
-      ;;source: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwizuoyypbHoAhWNgVwKHdERDqIQFjAAegQIBBAB&url=https%3A%2F%2Fwww.insee.fr%2Ffr%2Fstatistiques%2Ffichier%2F2586038%2FLOGFRA17j1_F5.1.pdf&usg=AOvVaw1FYYaTUWdRFyhe9mqPV_zI
-      ;; 15% of households have another residence
-
-
-         ;;source : https://www.insee.fr/fr/statistiques/3620894
+        ;;source : https://www.insee.fr/fr/statistiques/3620894
       ;; in France 2018 for municipalities with population between 2000 and 100000 residents: 33% collective homes, 66% individual
 
        let h random-float 100
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
-
        let g random-float 100
       if (work-status = "essential" and home-type = "collective")[set class "poor" set shape "circle"]
        if (work-status = "non-essential" and home-type = "individual")[
@@ -284,21 +249,15 @@ to setup-people
       ifelse (g < proba-secondary-home) [set secondary-home 1][set secondary-home 0]]
 
 update-patch
-
-
-
     ]
   ]
-
 end
 
 to assign-color
-
   ask people with [infected? = 0 and immune? = 0][ set color 28]
   ask people with [infected? = 1][ set color 84]
   ask people with [immune? = 1][ set color 35 ]
   ask people with [alive? = 0][ set color black set shape "x"]
-
 end
 
 
@@ -312,7 +271,6 @@ to setup-jobs
 
      while [any? essential-workers-agentset]  [
    ask patches with [pcolor != 69] [
-   ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.2)  ( count essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "flag"
@@ -329,7 +287,6 @@ to setup-jobs
         ]
   ]
   ]
-
   ]
 
   let n-shops min (list (shop-per-100-inhab * total-population / 100)  (n-essential-workers))
@@ -364,28 +321,23 @@ to setup-jobs
              ask worker [set job-id myself]
           ]
         ]
-       ; set worker-id [who] of worker
         ask non-essential-workers-agentset [
           let worker-to-remove [worker] of myself
           set non-essential-workers-agentset non-essential-workers-agentset with [self != worker-to-remove]
         ]
   ]
   ]
-
   ]
-
 
 end
 
 
 
 to go
-
   if all? people [infected? = 0]
     [ stop ]
   if all? people [alive? = 0]
     [ stop ]
-
 
     if count people with [alive? = 0] > 9 and lockdown? = 0 [
       ask people with [work-status != "essential"] [set mobile? 0]
@@ -399,8 +351,6 @@ to go
     ask jobs with [type-job = "non-essential"][die]
     ifelse secondary-houses?[print "Lockdown activated. People flee to their secondary homes"][print "Lockdown activated"]
     ]
-
-
 
   update-health
 
@@ -418,22 +368,12 @@ to go
   go-home
   ]
 
-;ask patches with [pcolor != 0] [
- ;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
-  ;]
-
-  update-globals
-    assign-color
+  assign-color
 
   tick
 
 end
 
-to update-globals
- set n-infected count people with [infected? = 1]
- set n-recovered count people with [immune? = 1]
- set n-deaths count people with [alive? = 0]
-end
 
 to update-patch
   ask patch-here[
@@ -443,7 +383,6 @@ end
 
 to go-to-work
   ask people[
-
  if job-id != 0[
       if mobile? = 1[
     move-to [patch-here] of job-id
@@ -458,10 +397,7 @@ end
 
 to go-shopping
    ask people[
-
-
     if random average-days-between-shopping = 1 [
-
     let my-shop one-of jobs with [is-shop? = 1] in-radius radius-movement
     if is-turtle? my-shop[
     move-to [patch-here] of my-shop
@@ -469,8 +405,6 @@ to go-shopping
         set activity "shop"
     ]
   ]
-
-
   ]
     ask people[ if infected? = 1 [ infect-people ]]
 end
@@ -526,10 +460,8 @@ end
 to update-health
   ask people with [infected? = 1][
   if ticks > time-at-infection + recovery-time [recover]
-
       let y random-float 100
        if y < proba-dying  [set alive? 0 set mobile? 0]
-
   ]
 end
 
@@ -583,10 +515,10 @@ NIL
 1
 
 SLIDER
-1288
-339
-1411
-372
+1115
+278
+1238
+311
 max-pop-city
 max-pop-city
 200
@@ -598,10 +530,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1073
-339
-1173
-372
+1114
+244
+1214
+277
 n-cities
 n-cities
 0
@@ -613,25 +545,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-1072
-178
-1254
-211
+1113
+83
+1295
+116
 essential-industry
 essential-industry
 0
 100
-47.0
+50.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-1072
-230
-1275
-263
+1113
+135
+1316
+168
 proba-secondary-home
 proba-secondary-home
 0
@@ -643,10 +575,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1072
-284
-1282
-317
+1113
+189
+1323
+222
 share-collective-housing
 share-collective-housing
 0
@@ -658,50 +590,50 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1074
-163
-1349
-190
+1115
+68
+1390
+95
 share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-1074
-213
-1331
-241
+1115
+118
+1372
+146
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-1073
-267
-1363
-295
+1114
+172
+1404
+200
 share of households living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-1074
-462
-1224
-480
+1117
+400
+1267
+418
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-1074
-322
-1224
-340
+1115
+227
+1265
+245
 Urban context
 11
 0.0
@@ -746,35 +678,35 @@ PENS
 "susceptible" 1.0 0 -408670 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-1072
-393
-1186
-426
+1115
+331
+1229
+364
 infection-proba
 infection-proba
 0
 100
-2.0
+3.0
 1
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-1073
-377
-1223
-395
+1116
+315
+1266
+333
 Epidemiological variables
 11
 0.0
 1
 
 SLIDER
-1187
-392
-1355
-425
+1230
+330
+1398
+363
 average-recovery-time
 average-recovery-time
 0
@@ -786,10 +718,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1073
-479
-1293
-512
+1116
+417
+1336
+450
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -801,10 +733,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1200
-513
-1344
-546
+1243
+451
+1387
+484
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -816,10 +748,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1073
-513
-1199
-546
+1116
+451
+1242
+484
 radius-movement
 radius-movement
 0
@@ -881,10 +813,10 @@ triangle: priviledged person
 1
 
 SLIDER
-1175
-339
-1287
-372
+1216
+244
+1328
+277
 link-radius
 link-radius
 0
@@ -916,10 +848,10 @@ PENS
 "priviledged" 1.0 0 -4757638 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
 
 SLIDER
-1072
-427
-1197
-460
+1115
+365
+1240
+398
 proba-dying
 proba-dying
 0

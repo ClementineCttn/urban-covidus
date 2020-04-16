@@ -1,9 +1,6 @@
 globals[
-  n-infected
-  n-recovered
-  n-deaths
   total-population
- non-essential-jobs
+  non-essential-jobs
   lockdown?
 ]
 
@@ -14,8 +11,7 @@ breed [houses house]
 
 cities-own[
   population
-  ;;jobs
-  id
+   id
 ]
 
 houses-own[
@@ -30,7 +26,7 @@ links-own[
 
 jobs-own[
   type-job
-  worker ;-id
+  worker
   is-shop?
 ]
 
@@ -39,12 +35,11 @@ patches-own[
   density
   people-counter
   neighbor-city-id
- ; worker-id
 ]
 people-own[
   alive? ;; 0/1
   age
-  infected? ;; 0/10/1
+  infected? ;; 0/1
   mobile? ;; 0/1
   immune? ;; 0/1
   time-at-infection
@@ -54,8 +49,6 @@ people-own[
   residence-city ;;
   residence-xy
   home-type ;; collective/individual
-;;  access-to-light ;; single-window / multiple-windows / balcony / garden
-;;  tenure-type ;; owned / rented / socially-rented / none
   secondary-home ;; 0/1
   my-city-id
   job-id
@@ -67,8 +60,6 @@ people-own[
 
 to setup
   ca
-
- ; ask patches [set people-counter 0 ]
   set lockdown? 0
   setup-cities
   setup-people
@@ -79,17 +70,10 @@ to setup
   setup-secondary-homes
   ]
 
- ; ask patches with [pcolor != 0] [
+  reset-ticks
 
-;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
- ; ]
-
-
-reset-ticks
-
-   ask one-of people [start-infection]
-   update-globals
-    assign-color
+  ask one-of people [start-infection]
+  assign-color
 
 end
 
@@ -104,7 +88,6 @@ to setup-city-links
       set  potential-infrastructure ([population] of end1 * [population] of end2) / ( d12 ^ 2 )
       if potential-infrastructure = max [[potential-infrastructure] of my-out-links] of t1 [set best 1]
     ]
-
     ask my-out-links with [potential-infrastructure < median [potential-infrastructure] of links / 1.5 and best != 1]
     [
       die
@@ -112,7 +95,6 @@ to setup-city-links
     if count link-neighbors < 1 [
       create-link-with min-one-of other cities [distance myself]
     ]
-
     ask patches with [city-id = [id] of myself][
       set neighbor-city-id ([[id] of link-neighbors] of myself)
     ]
@@ -121,7 +103,6 @@ end
 
 to setup-secondary-homes
   let second-home-agentset people with [secondary-home = 1]
-
   let n-secondary-homes count second-home-agentset
   ask n-of n-secondary-homes patches with [pcolor = 69][
     sprout-houses 1 [
@@ -151,15 +132,12 @@ to setup-cities
     ] [ setxy random-xcor random-ycor ]
     set id i
     set population max-pop-city / i
-    ;set shape "circle"
-    ;set color pink
     set size 0
     let p population / 100
     ask patch-here [
       set pcolor 9.9
       set city-id i
       set density n-cities - i + 2
-
       ask patches in-radius p  [
         set pcolor [pcolor] of myself
         set city-id i
@@ -169,22 +147,10 @@ to setup-cities
         set density round (n-cities - i + 2) / 2
       ]
     ]
-
-
     set i i + 1
   ]
 
-  ;; source OCDE (2020), Lits d’hôpitaux (indicateur). doi: 10.1787/9b82df80-fr (Consulté le 24 mars 2020)
-  ;; in france in 2018 : 6 hospital beds per 1000 hab. = 0.6%
-   ;; in france in 2018 : 3 icu beds per 1000 hab. = 0.3%
-   set total-population round ( sum [population] of cities )
-
-
- ; ask cities with [id = 1] [create-links-with cities with [id = 2]]
- ; ask cities with [count my-links = 0] [
- ;   create-links-with cities with [id = 1]
- ; ]
-end
+ end
 
 
 to setup-people
@@ -225,7 +191,6 @@ to setup-people
       ]
       ]
 
-
       ;; distribution of active workers by age from French population in 2016, Figure 2 https://www.insee.fr/fr/statistiques/3303384?sommaire=3353488
       ;; nb. age categories are not exactly coincidental (÷- 5 years)
 
@@ -245,13 +210,11 @@ to setup-people
       ]
       if [age] of self = "over-75" [set active 0]
 
-
-      ;; distribution of active workers by professions in France in 2016 https://www.insee.fr/fr/statistiques/3303413?sommaire=3353488
+     ;; distribution of active workers by professions in France in 2016 https://www.insee.fr/fr/statistiques/3303413?sommaire=3353488
       ;; large estimate of essential workers = 46.6%
       ;; 7.1% (human health) + 7.4% social + 12.9% commerce + 9.1% public admin + 4.6% finance + 5.5% Transport
 
      let c random-float 100
-
        if [active] of self = 1 [
         ifelse (c < essential-industry) [
           set work-status "essential"
@@ -260,16 +223,11 @@ to setup-people
         ]
       ]
 
-      ;;source: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwizuoyypbHoAhWNgVwKHdERDqIQFjAAegQIBBAB&url=https%3A%2F%2Fwww.insee.fr%2Ffr%2Fstatistiques%2Ffichier%2F2586038%2FLOGFRA17j1_F5.1.pdf&usg=AOvVaw1FYYaTUWdRFyhe9mqPV_zI
-      ;; 15% of households have another residence
-
-
-         ;;source : https://www.insee.fr/fr/statistiques/3620894
+        ;;source : https://www.insee.fr/fr/statistiques/3620894
       ;; in France 2018 for municipalities with population between 2000 and 100000 residents: 33% collective homes, 66% individual
 
        let h random-float 100
        ifelse (h < share-collective-housing) [set home-type "collective"][set home-type "individual"]
-
        let g random-float 100
       if (work-status = "essential" and home-type = "collective")[set class "poor" set shape "circle"]
        if (work-status = "non-essential" and home-type = "individual")[
@@ -284,21 +242,15 @@ to setup-people
       ifelse (g < proba-secondary-home) [set secondary-home 1][set secondary-home 0]]
 
 update-patch
-
-
-
     ]
   ]
-
 end
 
 to assign-color
-
   ask people with [infected? = 0 and immune? = 0][ set color 28]
   ask people with [infected? = 1][ set color 84]
   ask people with [immune? = 1][ set color 35 ]
   ask people with [alive? = 0][ set color black set shape "x"]
-
 end
 
 
@@ -312,7 +264,6 @@ to setup-jobs
 
      while [any? essential-workers-agentset]  [
    ask patches with [pcolor != 69] [
-   ;     let idc [city-id] of self
       let dens min list ([density] of self * 1.2)  ( count essential-workers-agentset in-radius link-radius)
     sprout-jobs dens [
         set shape "flag"
@@ -329,7 +280,6 @@ to setup-jobs
         ]
   ]
   ]
-
   ]
 
   let n-shops min (list (shop-per-100-inhab * total-population / 100)  (n-essential-workers))
@@ -364,28 +314,23 @@ to setup-jobs
              ask worker [set job-id myself]
           ]
         ]
-       ; set worker-id [who] of worker
         ask non-essential-workers-agentset [
           let worker-to-remove [worker] of myself
           set non-essential-workers-agentset non-essential-workers-agentset with [self != worker-to-remove]
         ]
   ]
   ]
-
   ]
-
 
 end
 
 
 
 to go
-
   if all? people [infected? = 0]
     [ stop ]
   if all? people [alive? = 0]
     [ stop ]
-
 
     if count people with [alive? = 0] > 9 and lockdown? = 0 [
       ask people with [work-status != "essential"] [set mobile? 0]
@@ -399,8 +344,6 @@ to go
     ask jobs with [type-job = "non-essential"][die]
     ifelse secondary-houses?[print "Lockdown activated. People flee to their secondary homes"][print "Lockdown activated"]
     ]
-
-
 
   update-health
 
@@ -418,22 +361,12 @@ to go
   go-home
   ]
 
-;ask patches with [pcolor != 0] [
- ;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
-  ;]
-
-  update-globals
-    assign-color
+  assign-color
 
   tick
 
 end
 
-to update-globals
- set n-infected count people with [infected? = 1]
- set n-recovered count people with [immune? = 1]
- set n-deaths count people with [alive? = 0]
-end
 
 to update-patch
   ask patch-here[
@@ -443,7 +376,6 @@ end
 
 to go-to-work
   ask people[
-
  if job-id != 0[
       if mobile? = 1[
     move-to [patch-here] of job-id
@@ -458,10 +390,7 @@ end
 
 to go-shopping
    ask people[
-
-
     if random average-days-between-shopping = 1 [
-
     let my-shop one-of jobs with [is-shop? = 1] in-radius radius-movement
     if is-turtle? my-shop[
     move-to [patch-here] of my-shop
@@ -469,8 +398,6 @@ to go-shopping
         set activity "shop"
     ]
   ]
-
-
   ]
     ask people[ if infected? = 1 [ infect-people ]]
 end
@@ -526,10 +453,8 @@ end
 to update-health
   ask people with [infected? = 1][
   if ticks > time-at-infection + recovery-time [recover]
-
       let y random-float 100
        if y < proba-dying  [set alive? 0 set mobile? 0]
-
   ]
 end
 
@@ -621,7 +546,7 @@ essential-industry
 essential-industry
 0
 100
-47.0
+50.0
 1
 1
 NIL
@@ -754,7 +679,7 @@ infection-proba
 infection-proba
 0
 100
-2.0
+3.0
 1
 1
 NIL
