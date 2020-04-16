@@ -61,6 +61,8 @@ people-own[
   job-id
   class
   house-id
+  activity
+  activity-at-infection
 ]
 
 to setup
@@ -207,6 +209,8 @@ to setup-people
       set job-id 0
       set class 0
       set house-id 0
+      set activity 0
+      set activity-at-infection 0
       set recovery-time random-normal average-recovery-time 1
 
    ;; distribution of people by age from French population projection in 2020, T16F032T2 https://www.insee.fr/fr/statistiques/1906664?sommaire=1906743
@@ -415,9 +419,9 @@ to go
   go-home
   ]
 
-ask patches with [pcolor != 0] [
-     set pcolor scale-color orange people-counter max [people-counter] of patches 0
-  ]
+;ask patches with [pcolor != 0] [
+ ;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
+  ;]
 
   update-globals
     assign-color
@@ -445,6 +449,7 @@ to go-to-work
       if mobile? = 1[
     move-to [patch-here] of job-id
       update-patch
+        set activity "work"
       ]
   ]
   ]
@@ -462,6 +467,7 @@ to go-shopping
     if is-turtle? my-shop[
     move-to [patch-here] of my-shop
           update-patch
+        set activity "shop"
     ]
   ]
 
@@ -474,6 +480,7 @@ to  go-home
   ask people [
     setxy item 0 residence-xy item 1 residence-xy
     update-patch
+    set activity "home"
   ]
   ask people with [home-type = "collective"][
     if infected? = 1 [
@@ -487,9 +494,11 @@ to  go-home-or-secondary-house
     ifelse secondary-home = 1[
       move-to [patch-here] of house-id
          update-patch
+       set activity "home"
     ][
      setxy item 0 residence-xy item 1 residence-xy
     update-patch
+       set activity "home"
       if home-type = "collective"[
     if infected? = 1 [
       infect-people
@@ -512,6 +521,7 @@ to start-infection
   set infected? 1
   set time-at-infection ticks
   set recovery-time random-normal average-recovery-time 2
+  set activity-at-infection activity
 end
 
 to update-health
@@ -574,10 +584,10 @@ NIL
 1
 
 SLIDER
-225
-323
-369
-356
+227
+312
+371
+345
 max-pop-city
 max-pop-city
 200
@@ -589,10 +599,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-323
-110
-356
+12
+312
+112
+345
 n-cities
 n-cities
 0
@@ -699,10 +709,10 @@ Unknown statistics
 1
 
 TEXTBOX
-11
-306
-161
-324
+13
+295
+163
+313
 Urban context
 11
 0.0
@@ -743,10 +753,10 @@ NIL
 1
 
 TEXTBOX
-10
-283
-159
-301
+12
+272
+161
+290
 FREE PARAMETERS
 14
 16.0
@@ -807,7 +817,7 @@ average-recovery-time
 average-recovery-time
 0
 30
-14.0
+12.0
 1
 1
 NIL
@@ -909,10 +919,10 @@ essential workplace
 1
 
 SLIDER
-112
-323
-224
-356
+114
+312
+226
+345
 link-radius
 link-radius
 0
@@ -967,7 +977,7 @@ PENS
 SLIDER
 293
 377
-397
+418
 410
 proba-dying
 proba-dying
@@ -997,28 +1007,17 @@ SWITCH
 131
 secondary-houses?
 secondary-houses?
-1
+0
 1
 -1000
 
 MONITOR
-295
-54
-352
-99
+1070
+506
+1120
+551
 deaths
 count people with [alive? = 0]
-17
-1
-11
-
-MONITOR
-275
-98
-401
-143
-secondary houses
-count people with [secondary-home = 1]
 17
 1
 11
@@ -1042,6 +1041,17 @@ PENS
 "poor" 1.0 0 -2674135 true "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])" "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])"
 "middle" 1.0 0 -4079321 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
 "rich" 1.0 0 -12087248 true "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])" "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])"
+
+MONITOR
+30
+495
+280
+540
+% of infection from work (POOR)
+(100 * count people with [class = \"poor\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"poor\"]
+2
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

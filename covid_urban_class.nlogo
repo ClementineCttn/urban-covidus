@@ -415,9 +415,9 @@ to go
   go-home
   ]
 
-ask patches with [pcolor != 0] [
-     set pcolor scale-color orange people-counter max [people-counter] of patches 0
-  ]
+;ask patches with [pcolor != 0] [
+ ;    set pcolor scale-color orange people-counter max [people-counter] of patches 0
+  ;]
 
   update-globals
     assign-color
@@ -967,7 +967,7 @@ PENS
 SLIDER
 293
 377
-397
+418
 410
 proba-dying
 proba-dying
@@ -997,14 +997,14 @@ SWITCH
 131
 secondary-houses?
 secondary-houses?
-1
+0
 1
 -1000
 
 MONITOR
 295
 54
-352
+345
 99
 deaths
 count people with [alive? = 0]
@@ -1015,7 +1015,7 @@ count people with [alive? = 0]
 MONITOR
 275
 98
-401
+390
 143
 secondary houses
 count people with [secondary-home = 1]
