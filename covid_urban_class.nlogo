@@ -397,7 +397,7 @@ to go
       ]
       set lockdown? 1
     ask jobs with [type-job = "non-essential"][die]
-      print "Lockdown activated. People flee to their secondary homes"
+    ifelse secondary-houses?[print "Lockdown activated. People flee to their secondary homes"][print "Lockdown activated"]
     ]
 
 
@@ -541,11 +541,11 @@ end
 GRAPHICS-WINDOW
 510
 17
-1040
-548
+1066
+574
 -1
 -1
-12.732
+13.37
 1
 10
 1
@@ -566,10 +566,10 @@ ticks
 30.0
 
 BUTTON
-46
-44
-130
-77
+12
+31
+96
+64
 Initialise
 setup
 NIL
@@ -583,10 +583,10 @@ NIL
 1
 
 SLIDER
-1288
-339
-1411
-372
+1115
+278
+1238
+311
 max-pop-city
 max-pop-city
 200
@@ -598,25 +598,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-1073
-339
-1173
-372
+1114
+244
+1214
+277
 n-cities
 n-cities
 0
 10
-9.0
+8.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-1072
-178
-1254
-211
+1113
+83
+1295
+116
 essential-industry
 essential-industry
 0
@@ -628,10 +628,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1072
-230
-1275
-263
+1113
+135
+1316
+168
 proba-secondary-home
 proba-secondary-home
 0
@@ -643,10 +643,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1072
-284
-1282
-317
+1113
+189
+1323
+222
 share-collective-housing
 share-collective-housing
 0
@@ -658,60 +658,60 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1074
-163
-1349
-190
+1115
+68
+1390
+95
 share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-1074
-213
-1331
-241
+1115
+118
+1372
+146
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-1073
-267
-1363
-295
+1114
+172
+1404
+200
 share of households living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-1074
-462
-1224
-480
+1117
+400
+1267
+418
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-1074
-322
-1224
-340
+1115
+227
+1265
+245
 Urban context
 11
 0.0
 1
 
 BUTTON
-49
-100
-127
-133
+114
+30
+192
+63
 Simulate
 go
 T
@@ -725,10 +725,10 @@ NIL
 1
 
 PLOT
-213
-42
-494
-192
+214
+47
+495
+197
 Global epidemic situation
 NIL
 NIL
@@ -746,10 +746,10 @@ PENS
 "susceptible" 1.0 0 -408670 true "plot count people with [infected? = 0 and immune? = 0]" "plot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-1072
-393
-1186
-426
+1115
+331
+1229
+364
 infection-proba
 infection-proba
 0
@@ -761,20 +761,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1073
-377
-1223
-395
+1116
+315
+1266
+333
 Epidemiological variables
 11
 0.0
 1
 
 SLIDER
-1187
-392
-1355
-425
+1230
+330
+1398
+363
 average-recovery-time
 average-recovery-time
 0
@@ -786,10 +786,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1073
-479
-1293
-512
+1116
+417
+1336
+450
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -801,10 +801,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1200
-513
-1344
-546
+1243
+451
+1387
+484
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -816,10 +816,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1073
-513
-1199
-546
+1116
+451
+1242
+484
 radius-movement
 radius-movement
 0
@@ -831,60 +831,60 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1073
 57
-1223
-75
+140
+207
+158
 infected person
 9
-44.0
+84.0
 1
 
 TEXTBOX
-1072
-69
-1222
-87
+56
+152
+206
+170
 susceptible person
 9
-67.0
+28.0
 1
 
 TEXTBOX
-1073
-81
-1223
-99
+57
+164
+207
+182
 immune person
 9
-105.0
+35.0
 1
 
 TEXTBOX
 1073
-92
+18
 1223
-110
-shop
+36
+flags = workplaces
 9
-125.0
+0.0
 1
 
 TEXTBOX
-1073
-103
-1223
-121
-essential workplace
+57
+123
+207
+141
+triangle: priviledged person
 9
-4.0
+130.0
 1
 
 SLIDER
-1175
-339
-1287
-372
+1216
+244
+1328
+277
 link-radius
 link-radius
 0
@@ -895,21 +895,11 @@ link-radius
 NIL
 HORIZONTAL
 
-TEXTBOX
-1073
-114
-1223
-132
-non-essential workplace
-9
-2.0
-1
-
 PLOT
 9
-200
+226
 300
-350
+376
 % infected per class
 NIL
 NIL
@@ -926,10 +916,10 @@ PENS
 "priviledged" 1.0 0 -4757638 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
 
 SLIDER
-1072
-427
-1197
-460
+1115
+365
+1240
+398
 proba-dying
 proba-dying
 0
@@ -942,20 +932,20 @@ HORIZONTAL
 
 SWITCH
 14
-514
+540
 193
-547
+573
 secondary-houses?
 secondary-houses?
-0
+1
 1
 -1000
 
 MONITOR
 80
-381
+407
 169
-426
+452
 Total deaths
 count people with [alive? = 0]
 17
@@ -964,9 +954,9 @@ count people with [alive? = 0]
 
 PLOT
 231
-382
+408
 497
-547
+573
 % of population dead
 NIL
 NIL
@@ -984,9 +974,9 @@ PENS
 
 MONITOR
 320
-250
+276
 495
-295
+321
 % working-class infections
 (100 * count people with [class = \"poor\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"poor\"]
 2
@@ -995,9 +985,9 @@ MONITOR
 
 MONITOR
 320
-302
+328
 496
-347
+373
 % priviledged class infections
 (100 * count people with [class = \"rich\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"rich\"]
 2
@@ -1006,9 +996,9 @@ MONITOR
 
 TEXTBOX
 320
-210
+236
 480
-242
+268
 Did they catch the virus while at work?
 13
 0.0
@@ -1016,29 +1006,29 @@ Did they catch the virus while at work?
 
 TEXTBOX
 11
-159
-191
-207
+205
+360
+223
 What proportion of each social class is infected ?
 13
 0.0
 1
 
 TEXTBOX
-214
-20
-467
-52
+336
+28
+589
+60
 Where is the epidemic at?
 13
 0.0
 1
 
 TEXTBOX
-1073
-31
-1223
-49
+57
+76
+207
+94
 Who's who?
 13
 0.0
@@ -1046,9 +1036,9 @@ Who's who?
 
 TEXTBOX
 31
-360
+386
 181
-392
+418
 How many people died so far?
 13
 0.0
@@ -1056,9 +1046,9 @@ How many people died so far?
 
 TEXTBOX
 232
-360
+386
 405
-392
+418
 Who died (by social class)?
 13
 0.0
@@ -1066,31 +1056,61 @@ Who died (by social class)?
 
 TEXTBOX
 14
-458
+484
 187
-506
+532
 Allow priviledged and middle class to own and isolate in second homes?
 13
 0.0
 1
 
 TEXTBOX
-41
-22
-191
-40
-Setup the world
+12
 13
+114
+31
+Setup the world
+12
 0.0
 1
 
 TEXTBOX
-31
-80
-181
-98
-Start the simulation
+114
 13
+264
+31
+Start the simulation
+12
+0.0
+1
+
+TEXTBOX
+57
+111
+207
+129
+square: middle class person
+9
+0.0
+1
+
+TEXTBOX
+57
+100
+207
+118
+circle: working class person
+9
+0.0
+1
+
+TEXTBOX
+57
+176
+207
+194
+x : dead person
+9
 0.0
 1
 
