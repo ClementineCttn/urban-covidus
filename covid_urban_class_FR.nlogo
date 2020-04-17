@@ -797,7 +797,7 @@ true
 "" ""
 PENS
 "défavorisés" 1.0 0 -14835848 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
-""classe moyenne"" 1.0 0 -955883 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
+"classe-moyenne" 1.0 0 -955883 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
 "favorisés" 1.0 0 -8630108 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
 
 SLIDER
@@ -854,7 +854,7 @@ true
 "" ""
 PENS
 "défavorisés" 1.0 0 -14835848 true "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])" "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])"
-""classe moyenne"" 1.0 0 -955883 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
+"classe-moyenne" 1.0 0 -955883 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
 "favorisés" 1.0 0 -8630108 true "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])" "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])"
 
 MONITOR
@@ -974,7 +974,7 @@ TEXTBOX
 129
 205
 157
-carré: personne \"classe moyenne\"
+carré: personne classe moyenne
 11
 25.0
 1
