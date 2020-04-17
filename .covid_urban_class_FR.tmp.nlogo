@@ -342,7 +342,7 @@ to go
       ]
       set lockdown? 1
     ask jobs with [type-job = "non-essential"][die]
-    ifelse secondary-houses?[print "Lockdown activated. People flee to their secondary homes"][print "Lockdown activated"]
+    ifelse secondary-houses?[print " activated. People flee to their secondary homes"][print "Lockdown activated"]
     ]
 
   update-health
@@ -493,9 +493,9 @@ ticks
 BUTTON
 12
 31
-96
+100
 64
-Initialise
+Initialiser
 setup
 NIL
 1
@@ -508,10 +508,10 @@ NIL
 1
 
 SLIDER
-1115
-278
-1238
-311
+1404
+288
+1527
+321
 max-pop-city
 max-pop-city
 200
@@ -523,10 +523,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1114
-244
-1214
-277
+1403
+254
+1503
+287
 n-cities
 n-cities
 0
@@ -538,25 +538,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-1113
-83
-1295
-116
+1402
+93
+1584
+126
 essential-industry
 essential-industry
 0
 100
-50.0
+33.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-1113
-135
-1316
-168
+1402
+145
+1605
+178
 proba-secondary-home
 proba-secondary-home
 0
@@ -568,10 +568,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1113
-189
-1323
-222
+1402
+199
+1612
+232
 share-collective-housing
 share-collective-housing
 0
@@ -583,50 +583,50 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1115
-68
-1390
-95
+1404
+78
+1679
+105
 share of workers in essential industries
 11
 0.0
 1
 
 TEXTBOX
-1115
-118
-1372
-146
+1404
+128
+1661
+156
 share of households with secondary home
 11
 0.0
 1
 
 TEXTBOX
-1114
-172
-1404
-200
+1403
+182
+1693
+210
 share of households living in collective housing
 11
 0.0
 1
 
 TEXTBOX
-1117
-400
-1267
-418
+1406
+410
+1556
+428
 Unknown statistics
 11
 0.0
 1
 
 TEXTBOX
-1115
-227
-1265
-245
+1404
+237
+1554
+255
 Urban context
 11
 0.0
@@ -637,7 +637,7 @@ BUTTON
 30
 192
 63
-Simulate
+Simuler
 go
 T
 1
@@ -654,7 +654,7 @@ PLOT
 47
 495
 197
-Global epidemic situation
+Situation épidémique globale
 NIL
 NIL
 0.0
@@ -665,16 +665,16 @@ true
 true
 "" ""
 PENS
-"infected" 1.0 0 -5908279 true "set-plot-pen-color  [128 205 193]\nplot count people with [infected? = 1]" "set-plot-pen-color  [128 205 193]\nplot count people with [infected? = 1]"
-"recovered" 1.0 0 -3844592 true "set-plot-pen-color [166 97 26]\nplot count people with [immune? = 1]" "set-plot-pen-color [166 97 26]\nplot count people with [immune? = 1]"
-"dead" 1.0 0 -16777216 true "plot count people with [alive? = 0]\n " "plot count people with [alive? = 0]"
-"susceptible" 1.0 0 -2570826 true "set-plot-pen-color [223 194 125]\nplot count people with [infected? = 0 and immune? = 0]" "set-plot-pen-color [223 194 125]\nplot count people with [infected? = 0 and immune? = 0]"
+"infectés" 1.0 0 -5908279 true "set-plot-pen-color  [128 205 193]\nplot count people with [infected? = 1]" "set-plot-pen-color  [128 205 193]\nplot count people with [infected? = 1]"
+"guéris" 1.0 0 -3844592 true "set-plot-pen-color [166 97 26]\nplot count people with [immune? = 1]" "set-plot-pen-color [166 97 26]\nplot count people with [immune? = 1]"
+"morts" 1.0 0 -16777216 true "plot count people with [alive? = 0]\n " "plot count people with [alive? = 0]"
+"sains" 1.0 0 -2570826 true "set-plot-pen-color [223 194 125]\nplot count people with [infected? = 0 and immune? = 0]" "set-plot-pen-color [223 194 125]\nplot count people with [infected? = 0 and immune? = 0]"
 
 SLIDER
-1115
-331
-1229
-364
+1404
+341
+1518
+374
 infection-proba
 infection-proba
 0
@@ -686,20 +686,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1116
-315
-1266
-333
+1405
+325
+1555
+343
 Epidemiological variables
 11
 0.0
 1
 
 SLIDER
-1230
-330
-1398
-363
+1519
+340
+1687
+373
 average-recovery-time
 average-recovery-time
 0
@@ -711,10 +711,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1116
-417
-1336
-450
+1405
+427
+1625
+460
 average-days-between-shopping
 average-days-between-shopping
 0
@@ -726,10 +726,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1243
-451
-1387
-484
+1532
+461
+1676
+494
 shop-per-100-inhab
 shop-per-100-inhab
 0
@@ -741,10 +741,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1116
-451
-1242
-484
+1405
+461
+1531
+494
 radius-movement
 radius-movement
 0
@@ -756,30 +756,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-1073
-18
-1223
-36
-flags = workplaces
-9
-0.0
-1
-
-TEXTBOX
-33
-144
-183
-162
-triangle: priviledged person
+17
+146
+200
+171
+triangle: personne favorisée
 11
 115.0
 1
 
 SLIDER
-1216
-244
-1328
-277
+1505
+254
+1617
+287
 link-radius
 link-radius
 0
@@ -795,7 +785,7 @@ PLOT
 226
 300
 376
-% infected per class
+% infectés par classe
 NIL
 NIL
 0.0
@@ -806,15 +796,15 @@ true
 true
 "" ""
 PENS
-"working class" 1.0 0 -14835848 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
-"middle class" 1.0 0 -955883 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
-"priviledged" 1.0 0 -8630108 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
+"défavorisés" 1.0 0 -14835848 true "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] " "plot (count people with [class = \"poor\" and infected? = 1] * 100)/ count people with [class = \"poor\"] "
+""classe moyenne"" 1.0 0 -955883 true "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] " "plot (count people with [class = \"middle\" and infected? = 1] * 100)/ count people with [class = \"middle\"] "
+"favorisés" 1.0 0 -8630108 true "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] " "plot (count people with [class = \"rich\" and infected? = 1] * 100)/ count people with [class = \"rich\"] "
 
 SLIDER
-1115
-365
-1240
-398
+1404
+375
+1529
+408
 proba-dying
 proba-dying
 0
@@ -837,22 +827,22 @@ secondary-houses?
 -1000
 
 MONITOR
-80
-407
-169
-452
-Total deaths
+129
+408
+206
+453
+Total morts
 count people with [alive? = 0]
 17
 1
 11
 
 PLOT
-231
+222
 408
-497
+498
 573
-% of population dead
+% de la classe sociale décédé
 NIL
 NIL
 0.0
@@ -863,16 +853,16 @@ true
 true
 "" ""
 PENS
-"working class" 1.0 0 -14835848 true "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])" "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])"
-"middle class" 1.0 0 -955883 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
-"priviledged" 1.0 0 -8630108 true "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])" "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])"
+"défavorisés" 1.0 0 -14835848 true "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])" "plot ((count people with [class = \"poor\" and alive? = 0] * 100)/ count people with [class = \"poor\"])"
+""classe moyenne"" 1.0 0 -955883 true "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])" "plot ((count people with [class = \"middle\" and alive? = 0] * 100)/ count people with [class = \"middle\"])"
+"favorisés" 1.0 0 -8630108 true "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])" "plot ((count people with [class = \"rich\" and alive? = 0] * 100)/ count people with [class = \"rich\"])"
 
 MONITOR
 320
 276
 495
 321
-% working-class infections
+% infections défavorisés
 (100 * count people with [class = \"poor\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"poor\"]
 2
 1
@@ -883,7 +873,7 @@ MONITOR
 328
 496
 373
-% priviledged class infections
+% infections favorisés
 (100 * count people with [class = \"rich\" and activity-at-infection = \"work\" ] ) /  count people with [class = \"rich\"]
 2
 1
@@ -894,7 +884,7 @@ TEXTBOX
 236
 480
 268
-Did they catch the virus while at WORK?
+Ont-ils.elles attrapé le virus au TRAVAIL ?
 13
 0.0
 1
@@ -902,59 +892,59 @@ Did they catch the virus while at WORK?
 TEXTBOX
 11
 205
-360
-223
-What proportion of each social class is infected ?
+372
+237
+Quelle proportion de chaque classe sociale est infectée ?
 13
 0.0
 1
 
 TEXTBOX
-336
+362
 28
-589
+615
 60
-Where is the epidemic at?
+Où en est l'épidemie?
 13
 0.0
 1
 
 TEXTBOX
-33
-88
-183
-106
-Who's who?
-13
-0.0
-1
-
-TEXTBOX
-31
-386
-181
-418
-How many people died so far?
-13
-0.0
-1
-
-TEXTBOX
-232
-386
-405
-418
-Who died (by social class)?
+17
+90
+167
+108
+Qui est qui ?
 13
 0.0
 1
 
 TEXTBOX
 12
-469
-185
-517
-Allow priviledged and middle class to own and isolate in second homes?
+385
+161
+433
+Combien de gens sont morts jusque là ?
+13
+0.0
+1
+
+TEXTBOX
+224
+387
+445
+419
+Qui est mort (par classe sociale)?
+13
+0.0
+1
+
+TEXTBOX
+13
+458
+206
+522
+Possibilité pour les privilégiés et classes moyennes d'avoir une résidence secondaire ?
 13
 0.0
 1
@@ -964,7 +954,7 @@ TEXTBOX
 13
 114
 31
-Setup the world
+Créer le monde
 12
 0.0
 1
@@ -974,47 +964,47 @@ TEXTBOX
 13
 264
 31
-Start the simulation
+Commencer la simulation
 12
 0.0
 1
 
 TEXTBOX
-33
-127
-192
-145
-square: middle class person
+17
+129
+205
+157
+carré: personne \"classe moyenne\"
 11
 25.0
 1
 
 TEXTBOX
-33
-111
-183
-129
-circle: working class person
+17
+113
+167
+131
+rond: personne défavorisée
 11
 75.0
 1
 
 TEXTBOX
-34
-162
-184
-180
-x : dead person
+18
+164
+168
+182
+x : personne morte
 11
 0.0
 1
 
 TEXTBOX
-11
-521
-239
-547
-(before initialising, not during simulation)
+12
+510
+207
+536
+(avant l'initialisation, pas pendant la simulation)
 10
 0.0
 1
